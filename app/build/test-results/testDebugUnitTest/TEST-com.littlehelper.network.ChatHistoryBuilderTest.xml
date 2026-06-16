@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.network.ChatHistoryBuilderTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.993Z" hostname="DESKTOP-6BFKR58" time="0.017">
+  <properties/>
+  <testcase name="toApiMessages_doesNotStitchWithoutSaveFollowUpContext" classname="com.littlehelper.network.ChatHistoryBuilderTest" time="0.009"/>
+  <testcase name="toApiMessages_stitchesSaveConfirmationWhenFollowUpContextSave" classname="com.littlehelper.network.ChatHistoryBuilderTest" time="0.006"/>
+  <testcase name="toApiMessages_excludesPartialAndStatusMessages" classname="com.littlehelper.network.ChatHistoryBuilderTest" time="0.0"/>
+  <testcase name="toApiMessages_includesUserAndAssistantTurns" classname="com.littlehelper.network.ChatHistoryBuilderTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

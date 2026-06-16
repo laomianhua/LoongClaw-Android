@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.data.MemoryIgnoreProtocolTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.762Z" hostname="DESKTOP-6BFKR58" time="0.191">
+  <properties/>
+  <testcase name="scenarioB_missingStatusWithNonEmptyOps_parsedAsSuccess" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.115"/>
+  <testcase name="scenarioC_isRecurring_explicitFalseCanClearBirthdayFlag" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.073"/>
+  <testcase name="scenarioA_explicitIgnoreStatus_parsedCorrectly" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.0"/>
+  <testcase name="scenarioB_missingStatusWithEmptyOps_parsedAsIgnore" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.0"/>
+  <testcase name="scenarioA_explicitIgnoreStatus_executorWritesZeroRows" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.002"/>
+  <testcase name="scenarioB_missingStatusWithEmptyOps_executorWritesZeroRows" classname="com.littlehelper.data.MemoryIgnoreProtocolTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

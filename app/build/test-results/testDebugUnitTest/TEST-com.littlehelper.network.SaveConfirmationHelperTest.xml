@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.network.SaveConfirmationHelperTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:28.038Z" hostname="DESKTOP-6BFKR58" time="0.002">
+  <properties/>
+  <testcase name="stitchSaveConfirmation_noOpWhenNotSaveContext" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.001"/>
+  <testcase name="isShortAffirmation_recognizesCommonPhrases" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="findPriorUserIntent_returnsUserBeforeSaveFollowUpAssistant" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="stitchSaveConfirmation_rewritesLastUserForApiOnly" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="stitchSaveConfirmation_noOpWhenNotAffirmation" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="isShortAffirmation_rejectsLongOrSubstantiveUtterances" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="findPriorUserIntent_returnsNullWhenNoSaveInvitation" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <testcase name="findPriorUserIntent_skipsStatusMessages" classname="com.littlehelper.network.SaveConfirmationHelperTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

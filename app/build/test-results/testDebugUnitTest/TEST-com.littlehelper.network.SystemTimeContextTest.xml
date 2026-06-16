@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.network.SystemTimeContextTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:28.043Z" hostname="DESKTOP-6BFKR58" time="0.013">
+  <properties/>
+  <testcase name="buildTimeBaselinePrefix_containsFixedDateAndExampleIso" classname="com.littlehelper.network.SystemTimeContextTest" time="0.013"/>
+  <testcase name="prependToSystemPrompt_putsBaselineFirst" classname="com.littlehelper.network.SystemTimeContextTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

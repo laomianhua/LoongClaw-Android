@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.network.LlmResponseValidatorTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:28.031Z" hostname="DESKTOP-6BFKR58" time="0.005">
+  <properties/>
+  <testcase name="needsDeleteWithoutOpsCorrection_whenUserDeleteAndVerbalOnly" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.001"/>
+  <testcase name="needsDeleteWithoutOpsCorrection_whenDeleteWithoutPromisePhrase" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDbOpsSelfCorrection_whenYiJiXiaButMissingOps" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsSaveConfirmEmptyReplyCorrection_falseWhenNotSaveContext" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsSaveConfirmEmptyReplyCorrection_whenAffirmationAndEmptyReply" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDeleteWithoutOpsCorrection_falseWhenDbOpsPresent" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.001"/>
+  <testcase name="needsDbOpsSelfCorrection_falseWhenLegacySaveBlockPresent" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.001"/>
+  <testcase name="needsDbOpsSelfCorrection_falseWhenIgnoreStatus" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="replyClaimsNothingRecorded_detectsEmptySaveMarkers" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDbOpsSelfCorrection_falseWhenDbOpsPresent" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDbOpsSelfCorrection_falseWhenInvitesSaveFollowUp" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDbOpsSelfCorrection_whenSaveTurnWithoutOps_evenWithoutPromisePhrase" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <testcase name="needsDeleteWithoutOpsCorrection_falseWhenUserCancels" classname="com.littlehelper.network.LlmResponseValidatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

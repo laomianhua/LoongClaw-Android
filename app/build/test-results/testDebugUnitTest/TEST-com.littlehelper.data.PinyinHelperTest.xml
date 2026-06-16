@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.data.PinyinHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.971Z" hostname="DESKTOP-6BFKR58" time="0.002">
+  <properties/>
+  <testcase name="appendPinyinSearchTerms_includesKey" classname="com.littlehelper.data.PinyinHelperTest" time="0.001"/>
+  <testcase name="samePinyin_hangVariantsMatchHanDoesNot" classname="com.littlehelper.data.PinyinHelperTest" time="0.001"/>
+  <testcase name="toPinyinKey_convertsChineseName" classname="com.littlehelper.data.PinyinHelperTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

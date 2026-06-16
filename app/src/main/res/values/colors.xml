@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#F5F5F5</color>
+    <color name="chat_background">#FFFFFF</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#4A5568</color>
+    <color name="text_assistant">#1E3A5F</color>
+    <color name="bubble_user">#E8F0FE</color>
+    <color name="bubble_assistant">#F0F0F0</color>
+    <color name="voice_button_normal">#2B6CB0</color>
+    <color name="voice_button_pressed">#1A4F8C</color>
+    <color name="voice_button_disabled">#B0BEC5</color>
+    <color name="voice_button_listening">#2F855A</color>
+    <color name="voice_button_text">#FFFFFF</color>
+    <color name="error_text">#C62828</color>
+</resources>

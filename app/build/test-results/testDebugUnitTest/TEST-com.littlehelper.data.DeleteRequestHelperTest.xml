@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.data.DeleteRequestHelperTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.702Z" hostname="DESKTOP-6BFKR58" time="0.032">
+  <properties/>
+  <testcase name="isVagueDeleteRequest_rejectsSpecificTarget" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.003"/>
+  <testcase name="isVagueDeleteRequest_rejectsNonDelete" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.0"/>
+  <testcase name="isDeleteCancellation_rejectsActualDeleteChoice" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.001"/>
+  <testcase name="buildAugmentedDeleteIntent_includesIndexAndSummary" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.02"/>
+  <testcase name="isVagueDeleteRequest_detectsBareDelete" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.001"/>
+  <testcase name="isDeleteCancellation_detectsUserAbort" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.0"/>
+  <testcase name="buildDeleteChoicePrompt_listsRecordsAndAsksWhichToDelete" classname="com.littlehelper.data.DeleteRequestHelperTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

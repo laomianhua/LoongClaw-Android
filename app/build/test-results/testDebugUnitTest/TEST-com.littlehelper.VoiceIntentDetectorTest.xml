@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.VoiceIntentDetectorTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.684Z" hostname="DESKTOP-6BFKR58" time="0.013">
+  <properties/>
+  <testcase name="detect_queryContext_keepsQueryForChoiceNumber" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.003"/>
+  <testcase name="asksDisambiguationChoice_detectsNumberPrompt" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="detect_saveContext_keepsSaveForTimeFollowUp" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="detect_queryForParkingQuestion" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_queryForQuestion" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForCorrectionUtterance" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="isAwaitingDeleteChoice_whenFailedDeleteRetry" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForAffirmationAfterQueryInvitation" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForDeleteRequest" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.003"/>
+  <testcase name="detect_deleteContext_keepsSaveForFirstOrdinal" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_queryForBirthdayWithNaTian" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_deleteContext_keepsSaveForChoiceNumber" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveAfterQueryInvitation" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="asksDeleteDisambiguationChoice_detectsAiDeletePrompt" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForBirthdayStatement" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="isCorrection_detectsCharacterClarification" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="asksDeleteDisambiguationChoice_detectsDeletePrompt" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForShortCharacterCorrection" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveAfterCoffeeTimeFollowUp" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.001"/>
+  <testcase name="invitesQueryFollowUp_detectsClarificationPrompt" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveForCorrectionEvenWithQuestionMarker" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_queryContext_keepsQueryForShortCharacterAnswer" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <testcase name="detect_saveAfterDeleteDisambiguationPrompt" classname="com.littlehelper.VoiceIntentDetectorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

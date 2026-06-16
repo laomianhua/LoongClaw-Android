@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.data.RecordInsertHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.976Z" hostname="DESKTOP-6BFKR58" time="0.01">
+  <properties/>
+  <testcase name="isExactDuplicate_matchesPersonAndDate" classname="com.littlehelper.data.RecordInsertHelperTest" time="0.007"/>
+  <testcase name="userRequestsNewRecord_detectsMarkers" classname="com.littlehelper.data.RecordInsertHelperTest" time="0.0"/>
+  <testcase name="buildInsertOperation_extractsPersonAndDate" classname="com.littlehelper.data.RecordInsertHelperTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

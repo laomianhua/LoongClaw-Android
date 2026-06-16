@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">语音小帮手</string>
+    <string name="voice_button_hold">按住 说话</string>
+    <string name="voice_button_listening">松开 结束</string>
+    <string name="voice_button_recording">松开 发送</string>
+    <string name="voice_button_recording_finished">点击发送（长按重录）</string>
+    <string name="voice_button_sending">转文字中…</string>
+    <string name="voice_button_processing">请稍候…</string>
+    <string name="voice_button_interrupt">按住 补充</string>
+    <string name="voice_button_follow_up">按住 回答</string>
+    <string name="voice_button_confirm">按住 确认</string>
+    <string name="voice_button_choose">按住 选号</string>
+    <string name="voice_button_retry">按住 重说</string>
+    <string name="clear_all_dialog_title">请仔细确认</string>
+    <string name="clear_all_dialog_message">您确定要删掉本子里记录的所有事情吗？删掉就找不回了。</string>
+    <string name="clear_all_confirm">确定删除</string>
+    <string name="clear_all_cancel">不删了</string>
+    <string name="clear_all_done_message">好的，本子里的记录已经全部清空了，您可以重新开始。</string>
+    <string name="welcome_message">您好，我是语音小帮手。您可以记下日程、停车位置、药放哪里，或问我之前记过的内容。</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.littlehelper.NameMatcherTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:27.460Z" hostname="DESKTOP-6BFKR58" time="0.215">
+  <properties/>
+  <testcase name="extractPersonNames_findsNameNearBirthday" classname="com.littlehelper.NameMatcherTest" time="0.073"/>
+  <testcase name="namesLikelySame_distinguishesHanAndHang" classname="com.littlehelper.NameMatcherTest" time="0.122"/>
+  <testcase name="recordMentionsName_matchesHangHomophoneNotHan" classname="com.littlehelper.NameMatcherTest" time="0.009"/>
+  <testcase name="isSameStoredPerson_distinguishesHomophoneNames" classname="com.littlehelper.NameMatcherTest" time="0.0"/>
+  <testcase name="findHomophoneMatches_doesNotMatchHanWhenStoredHang" classname="com.littlehelper.NameMatcherTest" time="0.003"/>
+  <testcase name="resolvePersonMatches_returnsAllWhenMultiplePinyinMatches" classname="com.littlehelper.NameMatcherTest" time="0.001"/>
+  <testcase name="isSeparatePersonClarification_detectsAnotherPerson" classname="com.littlehelper.NameMatcherTest" time="0.0"/>
+  <testcase name="findHomophoneMatches_returnsMatchingRecordForHang" classname="com.littlehelper.NameMatcherTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

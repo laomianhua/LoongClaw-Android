@@ -1,0 +1,10 @@
+# 复制本文件为 local.properties，填入你的本机 SDK 路径和 DeepSeek API Key。
+# local.properties 不会被 Git 提交。
+
+sdk.dir=C\:\\Users\\你的用户名\\AppData\\Local\\Android\\Sdk
+DEEPSEEK_API_KEY=sk-你的密钥
+
+# 火山引擎 ASR（语音识别）— 在火山引擎控制台获取
+VOLC_APPID=你的AppId
+VOLC_TOKEN=你的Token
+VOLC_CLUSTER=volcasr_default

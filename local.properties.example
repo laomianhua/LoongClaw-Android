@@ -8,3 +8,7 @@ DEEPSEEK_API_KEY=sk-你的密钥
 VOLC_APPID=你的AppId
 VOLC_TOKEN=你的Token
 VOLC_CLUSTER=volcasr_default
+
+# 高德地图 Android SDK — 在高德开放平台申请 Android 平台 Key（非 Web 服务 Key）
+# 包名 com.littlehelper，调试 SHA1 可用：.\gradlew signingReport
+AMAP_API_KEY=你的Android_SDK_Key

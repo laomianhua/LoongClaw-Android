@@ -70,9 +70,10 @@ class ReminderScheduler(private val context: Context) {
             context,
             recordId.toInt(),
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        ) ?: return
         alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
     }
 
     private fun buildTriggerTime(record: MemoryRecord): Long? {

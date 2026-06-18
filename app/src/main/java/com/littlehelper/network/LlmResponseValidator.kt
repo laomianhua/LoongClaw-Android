@@ -4,8 +4,6 @@ package com.littlehelper.network
 
 import com.littlehelper.FollowUpContext
 
-import com.littlehelper.VoiceIntentDetector
-
 import com.littlehelper.data.DeleteRequestHelper
 
 
@@ -20,7 +18,16 @@ object LlmResponseValidator {
 
     fun hasActionableDbOps(response: LlmResponseParser.ParsedResponse): Boolean {
         if (isIgnoredDbOps(response)) return false
-        return !response.dbOpsPayload?.operations.isNullOrEmpty()
+        val payload = response.dbOpsPayload ?: return false
+        if (!payload.operations.isNullOrEmpty()) return true
+        if (com.littlehelper.domain.todo.NotebookAction.isTodoAction(payload.action) &&
+            payload.todoPayload != null
+        ) {
+            return true
+        }
+        return com.littlehelper.domain.map.IntentRoute.fromWire(payload.intentRoute) ==
+            com.littlehelper.domain.map.IntentRoute.MAP &&
+            !payload.action.isNullOrBlank()
     }
 
 
@@ -44,17 +51,11 @@ object LlmResponseValidator {
 
 
     /** AI 仍在合法追问、尚未到写库步骤 → 允许本轮无 DB_OPS。 */
-
     fun isLegitimateFollowUpWithoutOps(reply: String): Boolean {
-
-        return VoiceIntentDetector.invitesFollowUp(reply.trim())
-
+        return AssistantFollowUpDetector.invitesFollowUp(reply.trim())
     }
 
-
-
     /** 记下确认轮：用户短肯定 + 无 DB_OPS + 回复声称未记下 → 需后台纠错。 */
-
     fun needsSaveConfirmEmptyReplyCorrection(
 
         response: LlmResponseParser.ParsedResponse,
@@ -103,7 +104,7 @@ object LlmResponseValidator {
 
         val userText = lastUserText.orEmpty()
         if (DeleteRequestHelper.isDeleteCancellation(userText)) return false
-        if (!VoiceIntentDetector.isDeleteRequest(userText)) return false
+        if (!DeleteRequestHelper.isDeleteRequest(userText)) return false
 
         if (hasActionableDbOps(response)) return false
 
@@ -133,7 +134,7 @@ object LlmResponseValidator {
 
     ): Boolean {
 
-        if (VoiceIntentDetector.isDeleteRequest(lastUserText.orEmpty())) return false
+        if (DeleteRequestHelper.isDeleteRequest(lastUserText.orEmpty())) return false
 
         if (hasActionableDbOps(response)) return false
 

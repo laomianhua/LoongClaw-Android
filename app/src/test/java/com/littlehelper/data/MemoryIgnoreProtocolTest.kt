@@ -21,7 +21,7 @@ class MemoryIgnoreProtocolTest {
     @Test
     fun scenarioA_explicitIgnoreStatus_parsedCorrectly() {
         val content = """
-            没听懂您想记什么，请您再清楚地说一遍好吗？
+            没太听明白，请再说清楚一点。
             ___DB_OPS_START___
             {
               "status": "ignore",
@@ -43,7 +43,7 @@ class MemoryIgnoreProtocolTest {
         val executor = MemoryOperationExecutor(MemoryRepository(dao))
 
         val ignoreOpsResponse = LlmResponseParser.ParsedResponse(
-            reply = "没听懂您想记什么，请您再清楚地说一遍好吗？",
+            reply = "没太听明白，请再说清楚一点。",
             savePayload = null,
             deletePayload = null,
             dbOpsPayload = com.littlehelper.data.LlmOpsResponse(
@@ -214,6 +214,11 @@ class MemoryIgnoreProtocolTest {
             allRecords.firstOrNull { it.category == category }
         override suspend fun getLatest(): MemoryRecord? = allRecords.maxByOrNull { it.createdAt }
         override suspend fun deleteAll() { allRecords.clear() }
+        override suspend fun searchIncompleteTodos(keyword: String, limit: Int): List<MemoryRecord> =
+            allRecords.filter {
+                it.type == "todo" && !it.done &&
+                    (it.summary.contains(keyword) || it.rawText.contains(keyword))
+            }.take(limit)
         override suspend fun resetDailyTodoDoneFlags(): Int {
             var count = 0
             allRecords.replaceAll { record ->

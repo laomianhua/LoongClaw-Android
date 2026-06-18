@@ -89,4 +89,20 @@ interface MemoryDao {
         """
     )
     suspend fun resetDailyTodoDoneFlags(): Int
+
+    /** 未完成待办模糊检索（type=todo, done=0）。 */
+    @Query(
+        """
+        SELECT * FROM memories
+        WHERE type = 'todo'
+          AND done = 0
+          AND (
+            summary LIKE '%' || :keyword || '%'
+            OR raw_text LIKE '%' || :keyword || '%'
+          )
+        ORDER BY created_at DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun searchIncompleteTodos(keyword: String, limit: Int = 20): List<MemoryRecord>
 }

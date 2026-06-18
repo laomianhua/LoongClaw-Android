@@ -62,6 +62,9 @@ class MemoryOperationExecutorClearAllTest {
 
         override suspend fun resetDailyTodoDoneFlags(): Int = 0
 
+        override suspend fun searchIncompleteTodos(keyword: String, limit: Int): List<MemoryRecord> =
+            emptyList()
+
         override fun getAllFlow(): kotlinx.coroutines.flow.Flow<List<MemoryRecord>> = kotlinx.coroutines.flow.flowOf(allRecords.toList())
     }
 }

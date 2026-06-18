@@ -25,8 +25,8 @@ android {
         applicationId = "com.littlehelper"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -52,6 +52,19 @@ android {
             "VOLC_CLUSTER",
             "\"${localProperties.getProperty("VOLC_CLUSTER", "")}\""
         )
+
+        buildConfigField(
+            "String",
+            "AMAP_API_KEY",
+            "\"${localProperties.getProperty("AMAP_API_KEY", "")}\""
+        )
+
+        manifestPlaceholders["AMAP_API_KEY"] =
+            localProperties.getProperty("AMAP_API_KEY", "")
+
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -101,6 +114,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.belerweb:pinyin4j:2.5.1")
+
+    // 高德 3D 地图 + 定位（合包，勿再单独引入 3dmap / location 以免冲突）
+    implementation("com.amap.api:3dmap-location-search:10.1.500_loc6.5.0_sea9.7.4")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

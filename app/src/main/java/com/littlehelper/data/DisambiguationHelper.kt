@@ -46,6 +46,20 @@ object DisambiguationHelper {
 
     }
 
+    fun buildIncompleteTodosAnswer(records: List<MemoryRecord>): String {
+        if (records.isEmpty()) return "您目前还没有未完成的待办任务。"
+        val lines = records.mapIndexed { index, record ->
+            "${index + 1}. ${formatRecordLine(record, question = "")}"
+        }
+        return buildString {
+            append("您现在有 ${records.size} 条待办：")
+            lines.forEach { line ->
+                append('\n')
+                append(line)
+            }
+        }
+    }
+
 
 
     fun buildChoicePrompt(records: List<MemoryRecord>, question: String): String {
@@ -247,7 +261,41 @@ object RecordListQueryHelper {
 
     )
 
+    private val memoryQueryMarkers = listOf(
+        "记在哪儿",
+        "记在哪里",
+        "记在啥地方",
+        "刚才记",
+        "哪条记",
+        "有什么记",
+        "有啥记",
+        "回忆一下",
+        "查一下记",
+        "找一下记"
+    )
 
+    private val listQueryHints = listOf("哪些", "什么", "有哪些", "多少", "几条", "有没有")
+
+    /** 端侧显式短语：命中则走 queryMemory，绝不进入秘书 SAVE / insert 流程。 */
+    fun isMemoryQueryRequest(question: String): Boolean {
+        val normalized = question.trim()
+        if (normalized.isEmpty()) return false
+        if (isListAllRecordsQuestion(normalized)) return true
+        if (memoryQueryMarkers.any { normalized.contains(it) }) return true
+        if (isTodoListQuestion(normalized)) return true
+        if (normalized.contains("记录") && listQueryHints.any { normalized.contains(it) }) return true
+        return false
+    }
+
+    fun isTodoListQuestion(question: String): Boolean {
+        val normalized = question.trim()
+        if (normalized.isEmpty()) return false
+        val mentionsTodo = normalized.contains("待办") || normalized.contains("代办")
+        if (!mentionsTodo) return false
+        // 「代办/待办记录有哪些」按列举全部记录处理，不单列 type=todo
+        if (normalized.contains("记录") && listQueryHints.any { normalized.contains(it) }) return false
+        return listQueryHints.any { normalized.contains(it) }
+    }
 
     fun isListAllRecordsQuestion(question: String): Boolean {
 

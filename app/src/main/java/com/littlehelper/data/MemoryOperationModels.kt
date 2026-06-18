@@ -3,10 +3,17 @@ package com.littlehelper.data
 import androidx.annotation.Keep
 import com.google.gson.annotations.SerializedName
 
+import com.littlehelper.domain.todo.TodoActionPayload
+
 @Keep
 data class LlmOpsResponse(
     val status: String = "success",
     val reason: String? = null,
+    @SerializedName("intent_route")
+    val intentRoute: String? = null,
+    val action: String? = null,
+    val payload: com.littlehelper.domain.map.MapInstructionPayload? = null,
+    val todoPayload: TodoActionPayload? = null,
     val operations: List<MemoryOperation>? = null
 )
 

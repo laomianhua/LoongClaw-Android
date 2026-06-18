@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.littlehelper.reminder.NotificationHelperTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-16T00:54:28.062Z" hostname="DESKTOP-6BFKR58" time="0.001">
-  <properties/>
-  <testcase name="channelId_usesV5WithSoundChannel" classname="com.littlehelper.reminder.NotificationHelperTest" time="0.001"/>
-  <testcase name="reminderVibrationPattern_hasThreePulses" classname="com.littlehelper.reminder.NotificationHelperTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

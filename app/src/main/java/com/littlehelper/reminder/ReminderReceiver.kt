@@ -29,6 +29,32 @@ class ReminderReceiver : BroadcastReceiver() {
         val eventDate = intent.getStringExtra(EXTRA_EVENT_DATE)
         val isRecurring = intent.getBooleanExtra(EXTRA_IS_RECURRING, false)
 
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                if (recordId > 0) {
+                    val record = AppDatabase.getInstance(context).memoryDao().getById(recordId)
+                    if (record == null) {
+                        ReminderScheduler(context).cancelReminder(recordId)
+                        return@launch
+                    }
+                    deliverReminder(context, recordId, title, message, eventDate, isRecurring, record)
+                }
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private suspend fun deliverReminder(
+        context: Context,
+        recordId: Long,
+        title: String,
+        message: String,
+        eventDate: String?,
+        isRecurring: Boolean,
+        record: MemoryRecord
+    ) {
         NotificationHelper.ensureChannel(context)
         ReminderVibrator.vibrateReminder(context.applicationContext)
         val openIntent = Intent(context, MainActivity::class.java).apply {
@@ -57,16 +83,10 @@ class ReminderReceiver : BroadcastReceiver() {
         NotificationManagerCompat.from(context).notify(recordId.toInt(), notification)
 
         if (isRecurring) {
-            scope.launch {
-                val record = AppDatabase.getInstance(context).memoryDao().getById(recordId)
-                    ?: return@launch
-                if (record.isDailyRecurring()) {
-                    // 「每天XX:XX」— 明天同一时刻再响
-                    rescheduleNextDay(context, record, message)
-                } else if (!eventDate.isNullOrBlank()) {
-                    // 生日/年度纪念日 — 明年同一天再响
-                    rescheduleNextYear(context, recordId, eventDate, message)
-                }
+            if (record.isDailyRecurring()) {
+                rescheduleNextDay(context, record, message)
+            } else if (!eventDate.isNullOrBlank()) {
+                rescheduleNextYear(context, recordId, eventDate, message)
             }
         }
     }

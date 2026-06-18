@@ -1,37 +1,48 @@
 package com.littlehelper.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Composable
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,35 +51,47 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.littlehelper.R
-import com.littlehelper.ui.components.ChatBubble
-import com.littlehelper.ui.components.VoiceHoldButton
 import com.littlehelper.viewmodel.MainUiState
-
+import com.littlehelper.BuildConfig
+import com.littlehelper.R
+import com.littlehelper.data.MemoryRecord
+import com.littlehelper.data.map.MapServiceFactory
+import com.littlehelper.domain.map.IMapService
+import com.littlehelper.presentation.mapview.MapCard
+import com.littlehelper.presentation.stack.CardStackManager
+import com.littlehelper.presentation.stack.DrawerCard
+import com.littlehelper.presentation.stack.DrawerTabBar
+import com.littlehelper.ui.components.ChatBubble
 import com.littlehelper.ui.components.DashboardCard
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.HorizontalDivider
+import com.littlehelper.ui.components.VoiceHoldButton
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@androidx.compose.material3.ExperimentalMaterial3Api
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     uiState: MainUiState,
-    records: List<com.littlehelper.data.MemoryRecord>,
+    records: List<MemoryRecord>,
     onHoldStart: () -> Unit,
     onHoldEnd: (Long) -> Unit,
     onHoldCancel: () -> Unit,
-    onToggleTodo: (com.littlehelper.data.MemoryRecord) -> Unit,
-    onDeleteRecord: (com.littlehelper.data.MemoryRecord) -> Unit,
+    onToggleTodo: (MemoryRecord) -> Unit,
+    onDeleteRecord: (MemoryRecord) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onClearChatMessages: () -> Unit,
     showClearAllDialog: Boolean,
     onConfirmClearAll: () -> Unit,
     onDismissClearAll: () -> Unit,
+    onDrawerSelect: (DrawerCard) -> Unit,
+    onMapInstructionConsumed: (com.littlehelper.domain.map.MapExecuteResult?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showClearChatDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val listState = rememberLazyListState()
     val dashboardState = rememberLazyListState()
@@ -80,83 +103,143 @@ fun MainScreen(
         }
     }
 
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    // 红色按钮高度 76dp，底部 padding 32dp。
-    // 收起时，让抽屉上沿停留在红色按钮上方一点点，露出大约 140dp 的高度（刚好能看到拉条和第一张卡片的边缘）
-    val peekHeight = 140.dp 
+    val cardStackManager = remember { CardStackManager() }
+    val mapService: IMapService = remember { MapServiceFactory.create() }
 
-    val scaffoldState = androidx.compose.material3.rememberBottomSheetScaffoldState(
-        bottomSheetState = androidx.compose.material3.rememberStandardBottomSheetState(
-            initialValue = androidx.compose.material3.SheetValue.PartiallyExpanded,
+    DisposableEffect(mapService) {
+        onDispose { mapService.onDestroy() }
+    }
+
+    LaunchedEffect(uiState.activeDrawerCard) {
+        cardStackManager.switchToCard(uiState.activeDrawerCard)
+    }
+
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val peekHeight = 160.dp
+    val sheetExpandedHeight = screenHeight * 0.72f
+
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
             skipHiddenState = true
         )
     )
 
+    LaunchedEffect(uiState.drawerExpandRequest) {
+        if (uiState.drawerExpandRequest > 0) {
+            scaffoldState.bottomSheetState.expand()
+        }
+    }
+
+    LaunchedEffect(uiState.mapExecutionToken) {
+        if (uiState.mapExecutionToken == 0) return@LaunchedEffect
+        val request = uiState.pendingMapInstruction ?: return@LaunchedEffect
+        val supplementTts = uiState.pendingMapFallbackTts?.let {
+            com.littlehelper.domain.map.MapTtsAuthorization.isSdkDynamicTtsAuthorized(it)
+        } == true
+        mapService.initialize(context, BuildConfig.AMAP_API_KEY)
+        delay(400)
+        val result = runCatching {
+            mapService.executeInstruction(
+                context,
+                request.action,
+                request.payload,
+                supplementTts
+            )
+        }.getOrNull()
+        onMapInstructionConsumed(result)
+    }
+
+    val glassShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+    val sheetScope = rememberCoroutineScope()
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Transparent) // 强制 100% 透明
+            .background(Color.Transparent)
     ) {
-        // 1. 最底层背景层
-        /*
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.background),
-            contentDescription = "Background",
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        */
-
-        androidx.compose.material3.BottomSheetScaffold(
+        BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetPeekHeight = peekHeight,
+            sheetSwipeEnabled = false,
             containerColor = Color.Transparent,
             sheetContainerColor = Color.Transparent,
             sheetShadowElevation = 0.dp,
-            sheetDragHandle = null, // 我们自己画，带在玻璃底盘内部
+            sheetDragHandle = null,
             sheetContent = {
-                // Dashboard 玻璃底盘层 (60% height)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(screenHeight * 0.6f)
+                        .height(sheetExpandedHeight)
                         .background(
-                            color = Color.White.copy(alpha = 0.95f), // 进一步增加不透明度，防止文字重叠干扰
-                            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                            color = Color.White.copy(alpha = 0.95f),
+                            shape = glassShape
                         )
                         .border(
                             width = 1.dp,
-                            color = Color.White.copy(alpha = 0.8f), // 边缘高光
-                            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                            color = Color.White.copy(alpha = 0.8f),
+                            shape = glassShape
                         )
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // 拟物化大底盘拉条抓手
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .padding(top = 12.dp, bottom = 8.dp)
-                                .size(width = 40.dp, height = 4.dp)
-                                .background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
-                        )
-
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            state = dashboardState,
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                top = 8.dp,
-                                bottom = 120.dp // 留出底部按钮的空间
-                            )
+                                .fillMaxWidth()
+                                .pointerInput(scaffoldState, sheetScope) {
+                                    detectVerticalDragGestures { _, dragAmount ->
+                                        sheetScope.launch {
+                                            if (dragAmount < -12f) {
+                                                scaffoldState.bottomSheetState.expand()
+                                            } else if (dragAmount > 12f) {
+                                                scaffoldState.bottomSheetState.partialExpand()
+                                            }
+                                        }
+                                    }
+                                }
                         ) {
-                            items(
-                                items = records,
-                                key = { it.id }
-                            ) { record ->
-                                DashboardCard(
-                                    record = record,
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterHorizontally)
+                                    .padding(top = 12.dp, bottom = 4.dp)
+                                    .size(width = 40.dp, height = 4.dp)
+                                    .background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
+                            )
+
+                            DrawerTabBar(
+                                cards = cardStackManager.registeredCards,
+                                activeCard = cardStackManager.activeCard,
+                                onSelect = { card ->
+                                    cardStackManager.selectCard(card)
+                                    onDrawerSelect(card)
+                                }
+                            )
+                        }
+
+                        AnimatedContent(
+                            targetState = cardStackManager.activeCard,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(220)) togetherWith
+                                    fadeOut(animationSpec = tween(180))
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            label = "drawerContent"
+                        ) { activeCard ->
+                            when (activeCard) {
+                                DrawerCard.NOTEBOOK -> NotebookDrawerContent(
+                                    records = records,
+                                    listState = dashboardState,
                                     onToggleTodo = onToggleTodo,
                                     onDeleteRecord = onDeleteRecord
+                                )
+
+                                DrawerCard.MAP -> MapCard(
+                                    currentCard = activeCard,
+                                    mapService = mapService,
+                                    poiResults = uiState.mapPoiResults,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
                         }
@@ -164,20 +247,16 @@ fun MainScreen(
                 }
             }
         ) { innerPadding ->
-            // 2. 内容层 (Chat History)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
                     .systemBarsPadding()
             ) {
-                // Chat History (占满剩余空间)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        dimensionResource(R.dimen.chat_list_padding)
-                    )
+                    contentPadding = PaddingValues(dimensionResource(R.dimen.chat_list_padding))
                 ) {
                     items(
                         items = uiState.messages,
@@ -193,7 +272,6 @@ fun MainScreen(
             }
         }
 
-        // 顶层：红色对讲机大按钮，悬浮在最上方
         VoiceHoldButton(
             uiState = uiState,
             onHoldStart = onHoldStart,
@@ -204,11 +282,10 @@ fun MainScreen(
                 .padding(bottom = 32.dp)
         )
 
-        // 顶层：右上角极简扫把图标
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 16.dp) // 避开状态栏
+                .padding(top = 48.dp, end = 16.dp)
                 .size(48.dp)
                 .combinedClickable(
                     onClick = {},
@@ -216,10 +293,7 @@ fun MainScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "🧹",
-                fontSize = 24.sp
-            )
+            Text(text = "🧹", fontSize = 24.sp)
         }
     }
 
@@ -249,6 +323,32 @@ fun MainScreen(
             onConfirm = onConfirmClearAll,
             onDismiss = onDismissClearAll
         )
+    }
+}
+
+@Composable
+private fun NotebookDrawerContent(
+    records: List<MemoryRecord>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onToggleTodo: (MemoryRecord) -> Unit,
+    onDeleteRecord: (MemoryRecord) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = listState,
+        contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp)
+    ) {
+        items(
+            items = records,
+            key = { it.id }
+        ) { record ->
+            DashboardCard(
+                record = record,
+                onToggleTodo = onToggleTodo,
+                onDeleteRecord = onDeleteRecord
+            )
+        }
     }
 }
 

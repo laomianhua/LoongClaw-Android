@@ -1,8 +1,16 @@
 package com.littlehelper.data
 
-import com.littlehelper.VoiceIntentDetector
-
 object DeleteRequestHelper {
+
+    private val deleteMarkers = listOf(
+        "删除", "删掉", "去掉", "不要这条", "不要了", "取消记录", "删了"
+    )
+
+    fun isDeleteRequest(text: String): Boolean {
+        val normalized = text.trim()
+        if (normalized.isEmpty()) return false
+        return deleteMarkers.any { normalized.contains(it) }
+    }
 
     private val bareDeleteUtterances = setOf(
         "删除", "删掉", "去掉", "删了", "不要了", "取消记录"
@@ -18,7 +26,7 @@ object DeleteRequestHelper {
 
     /** 仅说「删除」等、未指明删哪条时返回 true。 */
     fun isVagueDeleteRequest(text: String): Boolean {
-        if (!VoiceIntentDetector.isDeleteRequest(text)) return false
+        if (!isDeleteRequest(text)) return false
 
         val normalized = text.trim().replace(Regex("[，。！？、\\s]"), "")
         if (normalized.isEmpty()) return false

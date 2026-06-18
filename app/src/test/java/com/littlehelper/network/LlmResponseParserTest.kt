@@ -126,7 +126,7 @@ class LlmResponseParserTest {
     @Test
     fun parse_ignoreStatus_returnsEmptyOpsWithReason() {
         val content = """
-            没听懂您想记什么，请您再清楚地说一遍好吗？
+            没太听明白，请再说清楚一点。
             ___DB_OPS_START___
             {
               "status": "ignore",
@@ -137,7 +137,7 @@ class LlmResponseParserTest {
         """.trimIndent()
 
         val result = LlmResponseParser.parse(content)
-        assertEquals("没听懂您想记什么，请您再清楚地说一遍好吗？", result.reply)
+        assertEquals("没太听明白，请再说清楚一点。", result.reply)
         assertNotNull(result.dbOpsPayload)
         assertEquals("ignore", result.dbOpsPayload?.status)
         assertEquals("text_too_vague_or_no_intent", result.dbOpsPayload?.reason)
@@ -147,7 +147,7 @@ class LlmResponseParserTest {
     @Test
     fun parse_ignoreStatus_defaultsReasonWhenMissing() {
         val content = """
-            没听懂您想记什么，请您再清楚地说一遍好吗？
+            没太听明白，请再说清楚一点。
             ___DB_OPS_START___
             {"status": "ignore", "operations": []}
             ___DB_OPS_END___
@@ -158,5 +158,65 @@ class LlmResponseParserTest {
         assertEquals("ignore", result.dbOpsPayload?.status)
         assertEquals("text_too_vague_or_no_intent", result.dbOpsPayload?.reason)
         assertTrue(result.dbOpsPayload?.operations?.isEmpty() == true)
+    }
+
+    @Test
+    fun parse_mapRoute_withoutOperations_isSuccess() {
+        val content = """
+            我帮您查一下开车去机场要多久。
+            ___DB_OPS_START___
+            {
+              "status": "success",
+              "intent_route": "MAP",
+              "action": "NAVIGATE",
+              "payload": {
+                "origin": "CURRENT_LOCATION",
+                "destination": "北京首都国际机场",
+                "mode": "DRIVING",
+                "query_type": "DURATION"
+              },
+              "operations": []
+            }
+            ___DB_OPS_END___
+        """.trimIndent()
+
+        val result = LlmResponseParser.parse(content)
+        assertEquals("success", result.dbOpsPayload?.status)
+        assertEquals("MAP", result.dbOpsPayload?.intentRoute)
+        assertEquals("NAVIGATE", result.dbOpsPayload?.action)
+        assertEquals("北京首都国际机场", result.dbOpsPayload?.payload?.destination)
+        assertTrue(result.dbOpsPayload?.operations?.isEmpty() == true)
+        assertTrue(LlmResponseValidator.hasActionableDbOps(result))
+    }
+
+    @Test
+    fun parse_mapControl_withoutOperations_isSuccess() {
+        val content = """
+            好的，我帮您定位。
+            ___DB_OPS_START___
+            {"status":"success","intent_route":"MAP","action":"MAP_CONTROL","payload":{"query_type":"LOCATION"},"operations":[]}
+            ___DB_OPS_END___
+        """.trimIndent()
+
+        val result = LlmResponseParser.parse(content)
+        assertEquals("success", result.dbOpsPayload?.status)
+        assertEquals("MAP_CONTROL", result.dbOpsPayload?.action)
+        assertEquals("LOCATION", result.dbOpsPayload?.payload?.queryType)
+    }
+
+    @Test
+    fun parse_viewLocation_hospital_withZoomLevelCamelCase() {
+        val content = """
+            好的，我帮您在地图上找一下北京协和医院。
+            ___DB_OPS_START___
+            {"status":"success","intent_route":"MAP","action":"VIEW_LOCATION","payload":{"keywords":"北京协和医院","city":"北京市","zoomLevel":16},"operations":[]}
+            ___DB_OPS_END___
+        """.trimIndent()
+
+        val result = LlmResponseParser.parse(content)
+        assertEquals("VIEW_LOCATION", result.dbOpsPayload?.action)
+        assertEquals("北京协和医院", result.dbOpsPayload?.payload?.keywords)
+        assertEquals("北京市", result.dbOpsPayload?.payload?.city)
+        assertEquals(16, result.dbOpsPayload?.payload?.zoomLevel)
     }
 }

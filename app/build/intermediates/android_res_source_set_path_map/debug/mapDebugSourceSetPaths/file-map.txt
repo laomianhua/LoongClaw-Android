@@ -1,8 +1,0 @@
-com.littlehelper.app-pngs-0 D:\Dev\LittleHelper\app\build\generated\res\pngs\debug
-com.littlehelper.app-updated_navigation_xml-1 D:\Dev\LittleHelper\app\build\generated\updated_navigation_xml\debug
-com.littlehelper.app-packageDebugResources-2 D:\Dev\LittleHelper\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.littlehelper.app-packageDebugResources-3 D:\Dev\LittleHelper\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.littlehelper.app-debug-4 D:\Dev\LittleHelper\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.littlehelper.app-debug-5 D:\Dev\LittleHelper\app\src\debug\res
-com.littlehelper.app-main-6 D:\Dev\LittleHelper\app\src\main\res
-gradleHome-0 C:\Users\heweijie\.gradle

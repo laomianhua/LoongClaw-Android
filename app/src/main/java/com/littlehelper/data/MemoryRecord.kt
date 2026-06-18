@@ -72,7 +72,7 @@ data class MemoryRecord(
 
     val category: String,
 
-    /** 长辈口中的相对日期（如「后天」「6月8号」）。 */
+    /** 用户口述的相对日期（如「后天」「6月8号」）。 */
 
     @ColumnInfo(name = "event_date")
 

@@ -98,7 +98,9 @@ class MainActivity : ComponentActivity() {
                         showClearAllDialog = false
                         viewModel.confirmClearAllRecords()
                     },
-                    onDismissClearAll = { showClearAllDialog = false }
+                    onDismissClearAll = { showClearAllDialog = false },
+                    onDrawerSelect = viewModel::selectDrawerCard,
+                    onMapInstructionConsumed = viewModel::consumeMapInstruction
                 )
             }
         }
@@ -157,7 +159,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleReminderIntent(intent: android.content.Intent?) {
+        val recordId = intent?.getLongExtra(ReminderReceiver.EXTRA_RECORD_ID, -1L) ?: -1L
         val message = intent?.getStringExtra(ReminderReceiver.EXTRA_MESSAGE)
-        viewModel.onReminderOpened(message)
+        viewModel.onReminderOpened(recordId = recordId, message = message)
     }
 }

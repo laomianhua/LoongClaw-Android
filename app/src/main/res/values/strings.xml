@@ -16,5 +16,5 @@
     <string name="clear_all_confirm">确定删除</string>
     <string name="clear_all_cancel">不删了</string>
     <string name="clear_all_done_message">好的，本子里的记录已经全部清空了，您可以重新开始。</string>
-    <string name="welcome_message">您好，我是语音小帮手。您可以记下日程、停车位置、药放哪里，或问我之前记过的内容。</string>
+    <string name="welcome_message">您好，我是语音小帮手。您可以记下日程、停车位置、物品存放，或问我之前记过的内容。</string>
 </resources>

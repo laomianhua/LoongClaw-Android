@@ -58,7 +58,9 @@ enum class FollowUpContext {
     NONE,
     SAVE,
     QUERY,
-    DELETE
+    DELETE,
+    /** 待办完成消歧跟进（App 本地 QUERY_TODO 多条结果后）。 */
+    TODO_DISAMBIGUATION
 }
 
 enum class AppPhase {

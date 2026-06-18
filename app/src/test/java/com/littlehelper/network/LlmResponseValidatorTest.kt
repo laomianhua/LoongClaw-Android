@@ -22,7 +22,7 @@ class LlmResponseValidatorTest {
 
         val content = """
 
-            没听懂您想记什么，请您再清楚地说一遍好吗？
+            没太听明白，请再说清楚一点。
 
             ___DB_OPS_START___
 

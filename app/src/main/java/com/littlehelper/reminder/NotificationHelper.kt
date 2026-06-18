@@ -15,7 +15,7 @@ object NotificationHelper {
     /** v5：系统默认通知铃声 + 振动 + 高优先级；可在系统设置里单独关铃声。 */
     const val CHANNEL_ID = "little_helper_reminders_v5"
 
-    /** 三次短振，便于长辈感知。 */
+    /** 三次短振，便于用户感知。 */
     val REMINDER_VIBRATION_PATTERN = longArrayOf(0, 450, 180, 450, 180, 450)
 
     fun defaultNotificationSoundUri(context: Context) =

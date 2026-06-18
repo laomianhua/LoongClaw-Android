@@ -1,8 +1,12 @@
 package com.littlehelper.network
 
+import com.littlehelper.util.DebugLog
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.littlehelper.data.LlmOpsResponse
+import com.littlehelper.domain.todo.NotebookAction
+import com.littlehelper.domain.todo.TodoActionPayload
 
 object LlmResponseParser {
     const val SAVE_START = "___SAVE_START___"
@@ -68,30 +72,65 @@ object LlmResponseParser {
         val endIndex = content.indexOf(DB_OPS_END, startIndex)
         if (endIndex < 0) return null
         val jsonBlock = content.substring(startIndex + DB_OPS_START.length, endIndex).trim()
+        DebugLog.d("LLM_PROTOCOL", "云端下发的原始JSON为: $jsonBlock")
         val raw = parseJson<RawDbOpsJson>(jsonBlock) ?: return null
+        val todoPayload = parseTodoPayload(jsonBlock, raw.action)
         val status = resolveDbOpsStatus(raw)
         if (status == "ignore") {
             return LlmOpsResponse(
                 status = "ignore",
                 reason = raw.reason ?: "text_too_vague_or_no_intent",
+                intentRoute = raw.intentRoute,
+                action = raw.action,
+                payload = raw.payload,
+                todoPayload = todoPayload,
                 operations = emptyList()
             )
         }
         return LlmOpsResponse(
             status = "success",
             reason = null,
+            intentRoute = raw.intentRoute,
+            action = raw.action,
+            payload = raw.payload,
+            todoPayload = todoPayload,
             operations = raw.operations.orEmpty()
         )
     }
 
+    private fun parseTodoPayload(jsonBlock: String, action: String?): TodoActionPayload? {
+        if (!NotebookAction.isTodoAction(action)) return null
+        return try {
+            val root = gson.fromJson(jsonBlock, JsonObject::class.java) ?: return null
+            val payloadElement = root.get("payload") ?: return null
+            gson.fromJson(payloadElement, TodoActionPayload::class.java)
+        } catch (_: JsonSyntaxException) {
+            null
+        }
+    }
+
     private fun resolveDbOpsStatus(raw: RawDbOpsJson): String {
         if (!raw.status.isNullOrBlank()) return raw.status
-        return if (!raw.operations.isNullOrEmpty()) "success" else "ignore"
+        if (!raw.operations.isNullOrEmpty()) return "success"
+        if (com.littlehelper.domain.map.IntentRoute.fromWire(raw.intentRoute) ==
+            com.littlehelper.domain.map.IntentRoute.MAP &&
+            !raw.action.isNullOrBlank()
+        ) {
+            return "success"
+        }
+        if (NotebookAction.isTodoAction(raw.action)) {
+            return "success"
+        }
+        return "ignore"
     }
 
     private data class RawDbOpsJson(
         val status: String? = null,
         val reason: String? = null,
+        @com.google.gson.annotations.SerializedName("intent_route")
+        val intentRoute: String? = null,
+        val action: String? = null,
+        val payload: com.littlehelper.domain.map.MapInstructionPayload? = null,
         val operations: List<com.littlehelper.data.MemoryOperation>? = null
     )
 

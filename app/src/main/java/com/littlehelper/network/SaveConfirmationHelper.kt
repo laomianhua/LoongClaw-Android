@@ -3,7 +3,6 @@ package com.littlehelper.network
 import com.littlehelper.ChatMessage as UiChatMessage
 import com.littlehelper.ChatRole
 import com.littlehelper.FollowUpContext
-import com.littlehelper.VoiceIntentDetector
 
 object SaveConfirmationHelper {
     private val affirmationPhrases = listOf(
@@ -48,7 +47,7 @@ object SaveConfirmationHelper {
 
         val saveFollowUpAssistantIndex = filtered.indices.lastOrNull { index ->
             filtered[index].role == ChatRole.ASSISTANT &&
-                VoiceIntentDetector.invitesSaveFollowUp(filtered[index].text)
+                AssistantFollowUpDetector.invitesSaveFollowUp(filtered[index].text)
         } ?: return null
 
         if (saveFollowUpAssistantIndex <= 0) return null

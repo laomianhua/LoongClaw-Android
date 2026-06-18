@@ -1,6 +1,6 @@
 package com.littlehelper.data
 
-
+import com.littlehelper.util.DebugLog
 
 import com.littlehelper.ImportanceLevel
 import com.littlehelper.MemoryCategory
@@ -12,7 +12,11 @@ class MemoryRepository(private val dao: MemoryDao) {
 
 
 
-    suspend fun save(record: MemoryRecord): Long = dao.insert(record.prepareForInsert())
+    suspend fun save(record: MemoryRecord): Long {
+        val prepared = record.prepareForInsert()
+        DebugLog.d("DB_OP", "本地触发了落库动作，内容为: ${prepared.summary}")
+        return dao.insert(prepared)
+    }
 
 
 
@@ -260,6 +264,12 @@ class MemoryRepository(private val dao: MemoryDao) {
 
         dao.deleteAll()
 
+    }
+
+    suspend fun searchIncompleteTodos(keyword: String, limit: Int = 20): List<MemoryRecord> {
+        val normalized = keyword.trim()
+        if (normalized.isEmpty()) return emptyList()
+        return dao.searchIncompleteTodos(normalized, limit)
     }
 
 }

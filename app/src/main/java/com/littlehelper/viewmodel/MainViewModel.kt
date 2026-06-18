@@ -11,6 +11,12 @@ import androidx.lifecycle.viewModelScope
 
 import com.littlehelper.AppPhase
 import com.littlehelper.FollowUpContext
+import com.littlehelper.RecordType
+import com.littlehelper.data.todo.TodoCompletionHelper
+import com.littlehelper.data.todo.TodoContextBuilder
+import com.littlehelper.domain.todo.NotebookAction
+import com.littlehelper.domain.todo.TodoActionPayload
+import com.littlehelper.domain.todo.TodoStatus
 
 import com.littlehelper.ChatMessage
 
@@ -20,11 +26,13 @@ import com.littlehelper.MemoryCategory
 
 import com.littlehelper.VoiceAction
 
+import com.littlehelper.network.AssistantFollowUpDetector
 import com.littlehelper.VoiceIntentDetector
 
 import com.littlehelper.data.DeleteRequestHelper
 import com.littlehelper.data.DisambiguationHelper
 import com.littlehelper.data.RecordListQueryHelper
+import com.littlehelper.util.DebugLog
 import com.littlehelper.data.AppDatabase
 import com.littlehelper.data.MemoryChangeConfirmationBuilder
 import com.littlehelper.data.MemoryMatch
@@ -72,6 +80,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
+
+import com.littlehelper.presentation.stack.DrawerCard
 
 
 
@@ -96,8 +108,31 @@ data class MainUiState(
     val retryListening: Boolean = false,
 
     /** TTS 正在播报的助手消息 id，用于高亮气泡。 */
-    val speakingMessageId: String? = null
+    val speakingMessageId: String? = null,
 
+    /** 底部抽屉当前激活标签（记事本 / 地图）。 */
+    val activeDrawerCard: DrawerCard = DrawerCard.NOTEBOOK,
+
+    /** 待 Compose 层消费的一次性地图 AI 指令。 */
+    val pendingMapInstruction: MapInstructionRequest? = null,
+
+    /** MAP 指令执行前若 AI 仅口头回复，TTS 兜底文案（高德结果优先）。 */
+    val pendingMapFallbackTts: String? = null,
+
+    /** 递增以强制 BottomSheet 展开至 72%（地图语音查询）。 */
+    val drawerExpandRequest: Int = 0,
+
+    /** 递增触发地图指令执行（勿与 pendingMapInstruction 共用 key，避免 LaunchedEffect 自取消）。 */
+    val mapExecutionToken: Int = 0,
+
+    /** MAP_CONTROL / POI_SEARCH 结果，供地图抽屉大字展示。 */
+    val mapPoiResults: List<com.littlehelper.domain.map.MapPoiResult> = emptyList()
+
+)
+
+data class MapInstructionRequest(
+    val action: String?,
+    val payload: com.littlehelper.domain.map.MapInstructionPayload?
 )
 
 
@@ -105,7 +140,11 @@ data class MainUiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
-        const val IGNORE_GUIDANCE = "没听懂您想记什么，请您再清楚地说一遍好吗？"
+        const val IGNORE_GUIDANCE = "没太听明白，请再说清楚一点。"
+        const val MAP_VIEW_HINT = "您可以打开地图卡片查看。"
+        private const val NETWORK_TIMEOUT_MS = 8_000L
+        private const val NETWORK_TIMEOUT_HINT = "网络不太稳定，请稍后再试。"
+        private const val REMINDER_COMPLETION_WINDOW_MS = 2 * 60 * 60 * 1000L
     }
 
     private val repository = MemoryRepository(AppDatabase.getInstance(application).memoryDao())
@@ -129,7 +168,147 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteRecord(record: com.littlehelper.data.MemoryRecord) {
         viewModelScope.launch {
+            reminderScheduler.cancelReminder(record.id)
             repository.delete(record)
+            if (lastSavedRecordId == record.id) {
+                lastSavedRecordId = null
+            }
+        }
+    }
+
+    fun selectDrawerCard(card: DrawerCard) {
+        _uiState.update { it.copy(activeDrawerCard = card) }
+    }
+
+    fun consumeMapInstruction(result: com.littlehelper.domain.map.MapExecuteResult? = null) {
+        val pendingRequest = _uiState.value.pendingMapInstruction
+        val aiReply = _uiState.value.pendingMapFallbackTts?.trim().orEmpty()
+        _uiState.update {
+            it.copy(
+                pendingMapInstruction = null,
+                pendingMapFallbackTts = null
+            )
+        }
+
+        if (result?.mapCleared == true) {
+            removeMapTransientChatMessages()
+        }
+
+        result?.failureMessage?.trim()?.takeIf { it.isNotEmpty() }?.let { failure ->
+            _uiState.update { it.copy(mapPoiResults = emptyList()) }
+            addAssistantMessage(failure)
+            speakAssistantText(failure)
+            releasePhaseFromProcessing()
+            return
+        }
+
+        val viewLocationKeyword = pendingRequest?.payload?.keywords?.trim().orEmpty()
+        val wasViewLocation = pendingRequest?.action ==
+            com.littlehelper.domain.map.MapAction.VIEW_LOCATION.wireValue
+        if (wasViewLocation && result?.poiResults.isNullOrEmpty()) {
+            val failure = viewLocationFailureMessage(
+                viewLocationKeyword.ifBlank { "这个地方" }
+            )
+            _uiState.update { it.copy(mapPoiResults = emptyList()) }
+            addAssistantMessage(failure)
+            speakAssistantText(failure)
+            releasePhaseFromProcessing()
+            return
+        }
+
+        if (pendingRequest != null && result == null) {
+            val keyword = viewLocationKeyword.ifBlank { "这个地方" }
+            val failure = if (wasViewLocation) {
+                viewLocationFailureMessage(keyword)
+            } else {
+                "地图查询未成功，请换个说法再试。"
+            }
+            _uiState.update { it.copy(mapPoiResults = emptyList()) }
+            addAssistantMessage(failure)
+            speakAssistantText(failure)
+            releasePhaseFromProcessing()
+            return
+        }
+
+        when {
+            !result?.poiResults.isNullOrEmpty() ->
+                _uiState.update {
+                    it.copy(mapPoiResults = result.poiResults!!, activeDrawerCard = DrawerCard.MAP)
+                }
+            result?.mapCleared == true ->
+                _uiState.update { it.copy(mapPoiResults = emptyList()) }
+        }
+
+        var spoke = false
+        val supplement = result?.supplementText?.trim().orEmpty()
+        val durationAnnouncement = result?.durationAnnouncement?.trim().orEmpty()
+        val locationAnnouncement = result?.locationAnnouncement?.trim().orEmpty()
+
+        val mergedReply = when {
+            locationAnnouncement.isNotEmpty() -> locationAnnouncement
+            aiReply.isNotEmpty() &&
+                com.littlehelper.domain.map.MapTtsAuthorization.isSdkDynamicTtsAuthorized(aiReply) &&
+                supplement.isNotEmpty() ->
+                com.littlehelper.domain.map.MapTtsAuthorization.mergeSdkResult(aiReply, supplement)
+            durationAnnouncement.isNotEmpty() && aiReply.isNotEmpty() ->
+                mergeMapDurationReply(aiReply, durationAnnouncement)
+            durationAnnouncement.isNotEmpty() -> durationAnnouncement
+            aiReply.isNotEmpty() -> aiReply
+            else -> null
+        }
+
+        mergedReply?.let { text ->
+            val withHint = appendMapViewHint(text)
+            replaceLastAssistantMessage(withHint)
+            speakAssistantText(withHint)
+            spoke = true
+        }
+
+        result?.transitDetail?.trim()?.takeIf { it.isNotEmpty() }?.let { detail ->
+            addAssistantMessage("💡 换乘指引\n$detail")
+        }
+
+        if (!spoke && aiReply.isNotEmpty()) {
+            val withHint = appendMapViewHint(aiReply)
+            replaceLastAssistantMessage(withHint)
+            speakAssistantText(withHint)
+        }
+
+        releasePhaseFromProcessing()
+    }
+
+    private fun removeMapTransientChatMessages() {
+        _uiState.update { state ->
+            state.copy(
+                messages = state.messages.filterNot { msg ->
+                    msg.role == ChatRole.ASSISTANT &&
+                        (msg.text.contains("💡 换乘指引") || msg.text.startsWith("💡"))
+                }
+            )
+        }
+    }
+
+    private fun appendMapViewHint(text: String): String {
+        val hint = MAP_VIEW_HINT
+        if (text.contains("地图卡片")) return text
+        return if (text.isBlank()) hint else "$text\n$hint"
+    }
+
+    private fun viewLocationFailureMessage(keyword: String): String {
+        return "地图上没有找到「$keyword」，请换个说法再试。"
+    }
+
+    private fun mergeMapDurationReply(aiReply: String, announcement: String): String {
+        if (aiReply.contains(com.littlehelper.domain.map.MapTtsAuthorization.CALCULATING_PLACEHOLDER)) {
+            return aiReply
+        }
+        val genericMarkers = listOf(
+            "查一下", "打开地图", "正在为您", "我帮您", "好的，"
+        )
+        return if (genericMarkers.any { aiReply.contains(it) } && aiReply.length <= 24) {
+            announcement
+        } else {
+            "$aiReply\n$announcement"
         }
     }
 
@@ -197,6 +376,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** 拼音匹配到多条记录时，等待用户说「第几个」。 */
     private var pendingDisambiguationRecords: List<MemoryRecord>? = null
     private var pendingDisambiguationQuestion: String? = null
+
+    /** QUERY_TODO 多条命中后，等待用户语音锁定待办。 */
+    private var pendingTodoCandidates: List<MemoryRecord>? = null
+
+    /** 用户从通知/提醒进入时绑定的待办 id，用于「吃完了」类回复直接勾选。 */
+    private var pendingReminderTodoId: Long? = null
+    private var pendingReminderOpenedAtMs: Long = 0L
 
 
 
@@ -365,10 +551,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 )
 
+            } catch (e: Exception) {
+                removePartialUserMessage()
+                speakAsrRetry("识别出错，请再试一次")
             } finally {
-
                 cleanupAudioFile(audioFile)
-
+                releasePhaseFromProcessing()
             }
 
         }
@@ -411,14 +599,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
 
-    fun onReminderOpened(message: String?) {
+    fun onReminderOpened(recordId: Long, message: String?) {
+        if (!message.isNullOrBlank()) {
+            addAssistantMessage("今日提醒：$message")
+            speakAssistantText(message)
+        }
+        viewModelScope.launch {
+            bindPendingReminderTodo(recordId)
+        }
+    }
 
-        if (message.isNullOrBlank()) return
+    private suspend fun bindPendingReminderTodo(recordId: Long) {
+        if (recordId <= 0L) {
+            clearPendingReminderTodo()
+            return
+        }
+        val record = repository.getById(recordId)
+        if (record != null &&
+            record.type == RecordType.TODO.value &&
+            !record.done
+        ) {
+            pendingReminderTodoId = record.id
+            pendingReminderOpenedAtMs = System.currentTimeMillis()
+        } else {
+            clearPendingReminderTodo()
+        }
+    }
 
-        addAssistantMessage("今日提醒：$message")
+    private fun clearPendingReminderTodo() {
+        pendingReminderTodoId = null
+        pendingReminderOpenedAtMs = 0L
+    }
 
-        speakAssistantText(message)
-
+    private fun isReminderCompletionWindowActive(): Boolean {
+        val id = pendingReminderTodoId ?: return false
+        if (id <= 0L) return false
+        return System.currentTimeMillis() - pendingReminderOpenedAtMs <= REMINDER_COMPLETION_WINDOW_MS
     }
 
 
@@ -433,7 +649,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ?.text
 
         if (DeleteRequestHelper.isDeleteCancellation(text) &&
-            VoiceIntentDetector.isAwaitingDeleteChoice(followUpContext, lastAssistantMessage)
+            followUpContext == FollowUpContext.DELETE
         ) {
             handleDeleteCancellation()
             return
@@ -464,7 +680,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         }
 
-        if (RecordListQueryHelper.isListAllRecordsQuestion(text)) {
+        if (RecordListQueryHelper.isMemoryQueryRequest(text)) {
             queryMemory(text)
             return
         }
@@ -487,12 +703,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             var spoke = false
             try {
+                withTimeout(NETWORK_TIMEOUT_MS) {
 
                 if (!deepSeekService.hasApiKey()) {
 
                     setError("请先在 local.properties 配置 DEEPSEEK_API_KEY")
                     spoke = true
-                    return@launch
+                    return@withTimeout
 
                 }
 
@@ -504,14 +721,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 val lastUserText = history.lastOrNull { it.role == ChatRole.USER }?.text.orEmpty()
 
+                tryCompleteActiveReminderTodo(lastUserText)?.let { reminderReply ->
+                    replaceLastStatusMessage(reminderReply)
+                    _uiState.update { it.copy(retryListening = false) }
+                    speakAssistantText(reminderReply)
+                    spoke = true
+                    return@withTimeout
+                }
+
                 val memoryContext = buildMemoryContextForLlm()
+                val supplementalContext = buildTodoSupplementalContext()
 
                 val followUpContext = if (wasSaveFollowUp) FollowUpContext.SAVE else FollowUpContext.NONE
 
                 val initialResponse = deepSeekService.sendSecretaryTurn(
                     history,
                     memoryContext,
-                    followUpContext
+                    followUpContext,
+                    supplementalContext
                 )
                 val resolved = resolveSecretaryResponse(
                     history,
@@ -524,23 +751,86 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (isAiIgnoredResponse(resolved.executionResponse)) {
                     handleAiIgnoredResponse()
                     spoke = true
-                    return@launch
+                    return@withTimeout
                 }
 
-                val execResult = executeMemoryChanges(resolved.executionResponse, lastUserText)
-                val reply = buildAppConfirmationReply(execResult)
-                    ?: resolved.displayReply.ifBlank { "好的，我在听。" }
+                val dbOps = resolved.executionResponse.dbOpsPayload
+                val route = com.littlehelper.domain.map.IntentRoute.fromWire(dbOps?.intentRoute)
+                    ?: com.littlehelper.domain.map.IntentRoute.MEMO
+
+                val reply = when (route) {
+                    com.littlehelper.domain.map.IntentRoute.MAP -> {
+                        val mapReply = resolved.displayReply.ifBlank { "好的，我帮您查一下。" }
+                        val isMapControl = dbOps?.action == com.littlehelper.domain.map.MapAction.MAP_CONTROL.wireValue
+                        _uiState.update {
+                            it.copy(
+                                mapExecutionToken = it.mapExecutionToken + 1,
+                                pendingMapInstruction = MapInstructionRequest(
+                                    action = dbOps?.action,
+                                    payload = dbOps?.payload
+                                ),
+                                pendingMapFallbackTts = mapReply,
+                                activeDrawerCard = if (isMapControl) DrawerCard.MAP else it.activeDrawerCard,
+                                mapPoiResults = if (isMapControl &&
+                                    dbOps?.payload?.queryType == com.littlehelper.domain.map.MapControlQueryType.CLEAR.wireValue
+                                ) {
+                                    emptyList()
+                                } else {
+                                    it.mapPoiResults
+                                }
+                            )
+                        }
+                        mapReply
+                    }
+                    else -> {
+                        _uiState.update {
+                            it.copy(
+                                activeDrawerCard = DrawerCard.NOTEBOOK,
+                                pendingMapInstruction = null,
+                                pendingMapFallbackTts = null
+                            )
+                        }
+                        when (dbOps?.action) {
+                            NotebookAction.QUERY_TODO -> handleQueryTodoAction(
+                                resolved = resolved,
+                                payload = dbOps.todoPayload,
+                                lastUserText = lastUserText,
+                                history = history,
+                                memoryContext = memoryContext
+                            )
+                            NotebookAction.UPDATE_TODO_STATUS -> handleUpdateTodoStatusAction(
+                                resolved = resolved,
+                                payload = dbOps.todoPayload
+                            )
+                            else -> {
+                                val execResult = executeMemoryChanges(resolved.executionResponse, lastUserText)
+                                buildAppConfirmationReply(execResult)
+                                    ?: resolved.displayReply.ifBlank { "好的，我在听。" }
+                            }
+                        }
+                    }
+                }
 
                 replaceLastStatusMessage(reply)
 
                 noteSaveFollowUpInvitation(reply)
                 noteDeleteFollowUpInvitation(reply)
+                noteTodoFollowUpInvitation(reply)
 
                 _uiState.update { it.copy(retryListening = false) }
 
-                speakAssistantText(reply)
+                val deferMapTts = route == com.littlehelper.domain.map.IntentRoute.MAP
+                if (!deferMapTts) {
+                    speakAssistantText(reply)
+                }
                 spoke = true
 
+                }
+
+            } catch (e: TimeoutCancellationException) {
+                replaceLastStatusMessage(NETWORK_TIMEOUT_HINT)
+                speakAssistantText(NETWORK_TIMEOUT_HINT)
+                spoke = true
             } catch (e: Exception) {
 
                 setError(e.message ?: "处理失败，请稍后再试")
@@ -548,9 +838,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             } finally {
 
-                if (!spoke) {
-                    _uiState.update { it.copy(phase = AppPhase.IDLE, isListening = false) }
-                }
+                releasePhaseFromProcessing()
 
             }
 
@@ -576,6 +864,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 append(" pinyin=${record.personPinyin.orEmpty()}")
                 append(" category=${record.category}")
                 append(" date=${record.eventDate.orEmpty()}")
+                append(" type=${record.type} done=${record.done}")
                 append(" summary=${record.summary}")
             }
         }
@@ -656,6 +945,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pendingDisambiguationRecords = null
         pendingDisambiguationQuestion = null
         pendingQueryQuestion = null
+        clearTodoDisambiguationState()
         syncFollowUpUiState()
 
         replaceLastStatusMessage(IGNORE_GUIDANCE)
@@ -698,15 +988,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ): MemoryOperationExecutor.ExecutionResult? {
         if (isAiIgnoredResponse(response)) return null
 
+        val isQueryUtterance = RecordListQueryHelper.isMemoryQueryRequest(lastUserText)
+
         val operations = mutableListOf<MemoryOperation>()
 
-        response.dbOpsPayload?.operations?.let { operations.addAll(it) }
+        response.dbOpsPayload?.operations?.let { ops ->
+            if (isQueryUtterance) {
+                val blocked = ops.filter { it.op.equals("insert", ignoreCase = true) }
+                if (blocked.isNotEmpty()) {
+                    DebugLog.w(
+                        "DB_OP",
+                        "拦截查询意图下的云端误插入 ${blocked.size} 条，用户话：$lastUserText"
+                    )
+                }
+                operations.addAll(ops.filter { !it.op.equals("insert", ignoreCase = true) })
+            } else {
+                operations.addAll(ops)
+            }
+        }
 
         if (operations.isEmpty()) {
             response.deletePayload?.let { payload ->
                 toDeleteOperation(payload, lastUserText)?.let { operations.add(it) }
             }
-            if (!VoiceIntentDetector.isDeleteRequest(lastUserText)) {
+            if (!isQueryUtterance && !DeleteRequestHelper.isDeleteRequest(lastUserText)) {
                 response.savePayload?.let { operations.add(it.toInsertOperation(lastUserText)) }
             }
         }
@@ -851,20 +1156,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun handleVagueDeleteRequest() {
         _uiState.update { it.copy(phase = AppPhase.PROCESSING, isListening = false) }
         viewModelScope.launch {
-            val records = repository.getAll()
-            if (records.isEmpty()) {
-                val reply = "目前还没有记下任何内容，没有可删的。"
-                addAssistantMessage(reply)
-                speakAssistantText(reply)
-                return@launch
+            try {
+                val records = repository.getAll()
+                if (records.isEmpty()) {
+                    val reply = "目前还没有记下任何内容，没有可删的。"
+                    addAssistantMessage(reply)
+                    speakAssistantText(reply)
+                    return@launch
+                }
+                val prompt = DeleteRequestHelper.buildDeleteChoicePrompt(records)
+                pendingDisambiguationRecords = records
+                pendingDisambiguationQuestion = null
+                followUpContext = FollowUpContext.DELETE
+                syncFollowUpUiState()
+                addAssistantMessage(prompt)
+                speakAssistantText(prompt)
+            } finally {
+                releasePhaseFromProcessing()
             }
-            val prompt = DeleteRequestHelper.buildDeleteChoicePrompt(records)
-            pendingDisambiguationRecords = records
-            pendingDisambiguationQuestion = null
-            followUpContext = FollowUpContext.DELETE
-            syncFollowUpUiState()
-            addAssistantMessage(prompt)
-            speakAssistantText(prompt)
         }
     }
 
@@ -1011,12 +1320,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
 
             try {
+                withTimeout(NETWORK_TIMEOUT_MS) {
 
                 if (!deepSeekService.hasApiKey()) {
 
                     setError("请先在 local.properties 配置 DEEPSEEK_API_KEY")
 
-                    return@launch
+                    return@withTimeout
 
                 }
 
@@ -1031,11 +1341,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 addAssistantMessage("正在查找记录…")
 
-                if (RecordListQueryHelper.isListAllRecordsQuestion(effectiveQuestion)) {
-                    val allRecords = repository.getAll()
-                    val answer = DisambiguationHelper.buildAllRecordsAnswer(allRecords)
-                    finishQueryResponse(answer)
-                    return@launch
+                when {
+                    RecordListQueryHelper.isTodoListQuestion(effectiveQuestion) -> {
+                        val todos = repository.getAll().filter {
+                            it.type == RecordType.TODO.value && !it.done
+                        }
+                        finishQueryResponse(DisambiguationHelper.buildIncompleteTodosAnswer(todos))
+                        return@withTimeout
+                    }
+                    RecordListQueryHelper.isListAllRecordsQuestion(effectiveQuestion) ||
+                        RecordListQueryHelper.isMemoryQueryRequest(effectiveQuestion) -> {
+                        val allRecords = repository.getAll()
+                        finishQueryResponse(DisambiguationHelper.buildAllRecordsAnswer(allRecords))
+                        return@withTimeout
+                    }
                 }
 
                 val plan = deepSeekService.planQuery(effectiveQuestion)
@@ -1055,23 +1374,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val birthdayMatches = findBirthdayMatches(effectiveQuestion, candidates)
                 if (birthdayMatches.size == 1 && hasHomophoneOnlyMismatch(effectiveQuestion, birthdayMatches.first())) {
                     presentDisambiguation(birthdayMatches, effectiveQuestion)
-                    return@launch
+                    return@withTimeout
                 }
                 if (birthdayMatches.size > 1) {
                     presentDisambiguation(birthdayMatches, effectiveQuestion)
-                    return@launch
+                    return@withTimeout
                 }
 
                 val directAnswer = buildDirectBirthdayAnswer(effectiveQuestion, candidates)
                 if (directAnswer != null) {
                     finishQueryResponse(directAnswer)
-                    return@launch
+                    return@withTimeout
                 }
 
                 val personMatches = findPersonMatches(effectiveQuestion, candidates)
                 if (personMatches.size > 1) {
                     presentDisambiguation(personMatches, effectiveQuestion)
-                    return@launch
+                    return@withTimeout
                 }
 
                 replaceLastStatusMessage("正在回答…")
@@ -1080,10 +1399,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 finishQueryResponse(answer)
 
+                }
+
+            } catch (e: TimeoutCancellationException) {
+                replaceLastStatusMessage(NETWORK_TIMEOUT_HINT)
+                speakAssistantText(NETWORK_TIMEOUT_HINT)
             } catch (e: Exception) {
 
                 setError(e.message ?: "查询失败，请稍后再试")
 
+            } finally {
+                releasePhaseFromProcessing()
             }
 
         }
@@ -1093,15 +1419,195 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private fun noteSaveFollowUpInvitation(assistantText: String) {
-        if (VoiceIntentDetector.invitesSaveFollowUp(assistantText)) {
+        if (AssistantFollowUpDetector.invitesSaveFollowUp(assistantText)) {
             followUpContext = FollowUpContext.SAVE
             syncFollowUpUiState()
         }
     }
 
     private fun noteDeleteFollowUpInvitation(assistantText: String) {
-        if (VoiceIntentDetector.asksDeleteDisambiguationChoice(assistantText)) {
+        if (AssistantFollowUpDetector.asksDeleteDisambiguationChoice(assistantText)) {
             followUpContext = FollowUpContext.DELETE
+            syncFollowUpUiState()
+        }
+    }
+
+    private fun noteTodoFollowUpInvitation(assistantText: String) {
+        if (AssistantFollowUpDetector.invitesTodoDisambiguation(assistantText)) {
+            followUpContext = FollowUpContext.TODO_DISAMBIGUATION
+            syncFollowUpUiState()
+        }
+    }
+
+    private fun buildTodoSupplementalContext(): String? {
+        val parts = listOfNotNull(
+            buildReminderSupplementalContext(),
+            buildTodoDisambiguationSupplementalContext()
+        )
+        return parts.joinToString("\n\n").ifBlank { null }
+    }
+
+    private fun buildReminderSupplementalContext(): String? {
+        if (!isReminderCompletionWindowActive()) return null
+        val recordId = pendingReminderTodoId ?: return null
+        return buildString {
+            append("# 刚推送的提醒待办（App 绑定）\n")
+            append("todo_id=").append(recordId)
+            append("\n若用户表示已完成（如吃完了、办完了），请直接输出 UPDATE_TODO_STATUS，")
+            append("status=COMPLETED，todo_id=").append(recordId)
+            append("；禁止 QUERY_TODO 消歧。")
+        }
+    }
+
+    private fun buildTodoDisambiguationSupplementalContext(): String? {
+        val candidates = pendingTodoCandidates ?: return null
+        return buildString {
+            append("# 待办消歧隐式上下文（App 本地 QUERY_TODO 查库结果，请结合用户本轮补充决策）\n")
+            append(TodoContextBuilder.formatCandidates(candidates))
+            append(
+                "\n若用户已明确锁定某条，请输出 UPDATE_TODO_STATUS，status=COMPLETED，并带 todo_id。"
+            )
+        }
+    }
+
+    private suspend fun tryCompleteActiveReminderTodo(userText: String): String? {
+        if (!isReminderCompletionWindowActive()) return null
+        if (!TodoCompletionHelper.looksLikeCompletionUtterance(userText)) return null
+        val recordId = pendingReminderTodoId ?: return null
+        val record = repository.getById(recordId)?.takeIf {
+            it.type == RecordType.TODO.value && !it.done
+        } ?: run {
+            clearPendingReminderTodo()
+            return null
+        }
+        val reply = completeTodoRecord(
+            record = record,
+            confirmation = "已将「${record.summary}」标为完成。"
+        )
+        clearPendingReminderTodo()
+        return reply
+    }
+
+    private suspend fun handleQueryTodoAction(
+        resolved: ResolvedSecretaryResponse,
+        payload: TodoActionPayload?,
+        lastUserText: String,
+        history: List<ChatMessage>,
+        memoryContext: String
+    ): String {
+        val keyword = payload?.queryKeyword?.trim().orEmpty()
+        if (keyword.isEmpty()) {
+            return resolved.displayReply.ifBlank { "好的，我在听。" }
+        }
+        val matches = repository.searchIncompleteTodos(keyword)
+        pendingReminderTodoId?.takeIf { isReminderCompletionWindowActive() }?.let { reminderId ->
+            if (TodoCompletionHelper.looksLikeCompletionUtterance(lastUserText)) {
+                matches.firstOrNull { it.id == reminderId }?.let { reminderRecord ->
+                    return completeTodoRecord(
+                        record = reminderRecord,
+                        confirmation = "已将「${reminderRecord.summary}」标为完成。"
+                    )
+                }
+            }
+        }
+        return when {
+            matches.isEmpty() -> {
+                clearTodoDisambiguationState()
+                "没找到相关的未完成任务呢"
+            }
+            matches.size == 1 -> resolveSingleTodoCompletion(
+                record = matches.single(),
+                userUtterance = lastUserText,
+                history = history,
+                memoryContext = memoryContext
+            )
+            else -> {
+                pendingTodoCandidates = matches
+                followUpContext = FollowUpContext.TODO_DISAMBIGUATION
+                syncFollowUpUiState()
+                TodoContextBuilder.buildDisambiguationPrompt(matches)
+            }
+        }
+    }
+
+    private suspend fun resolveSingleTodoCompletion(
+        record: MemoryRecord,
+        userUtterance: String,
+        history: List<ChatMessage>,
+        memoryContext: String
+    ): String {
+        val supplemental = buildString {
+            append("# 待办消歧隐式上下文（App 注入）\n")
+            append("用户对已完成待办做出反馈：").append(userUtterance).append('\n')
+            append("本地唯一匹配：")
+            append(TodoContextBuilder.formatCandidates(listOf(record)))
+            append("\n请直接输出 UPDATE_TODO_STATUS，status=COMPLETED，todo_id=")
+            append(record.id)
+            append('。')
+        }
+        val aiResponse = deepSeekService.sendSecretaryTurn(
+            history = history,
+            memoryContext = memoryContext,
+            supplementalContext = supplemental
+        )
+        val dbOps = aiResponse.dbOpsPayload
+        if (dbOps?.action == NotebookAction.UPDATE_TODO_STATUS) {
+            return handleUpdateTodoStatusAction(
+                resolved = ResolvedSecretaryResponse(
+                    aiResponse.reply.ifBlank { "好的。" },
+                    aiResponse
+                ),
+                payload = dbOps.todoPayload
+            )
+        }
+        return completeTodoRecord(
+            record = record,
+            confirmation = "已将「${record.summary}」标为完成。"
+        )
+    }
+
+    private suspend fun handleUpdateTodoStatusAction(
+        resolved: ResolvedSecretaryResponse,
+        payload: TodoActionPayload?
+    ): String {
+        if (!payload?.status.equals(TodoStatus.COMPLETED, ignoreCase = true)) {
+            return resolved.displayReply.ifBlank { "好的，我在听。" }
+        }
+        val record = resolveTodoTargetRecord(payload)
+            ?: return "没找到那条待办任务呢"
+        return completeTodoRecord(
+            record = record,
+            confirmation = resolved.displayReply.ifBlank {
+                "已将「${record.summary}」标为完成。"
+            }
+        )
+    }
+
+    private suspend fun resolveTodoTargetRecord(payload: TodoActionPayload?): MemoryRecord? {
+        payload?.todoId?.let { id ->
+            repository.getById(id)?.takeIf {
+                it.type == RecordType.TODO.value && !it.done
+            }?.let { return it }
+        }
+        val keyword = payload?.todoKeyword?.trim().orEmpty()
+        if (keyword.isEmpty()) return null
+        val matches = repository.searchIncompleteTodos(keyword)
+        if (matches.size == 1) return matches.single()
+        payload?.todoId?.let { id -> matches.firstOrNull { it.id == id } }?.let { return it }
+        return matches.firstOrNull()
+    }
+
+    private suspend fun completeTodoRecord(record: MemoryRecord, confirmation: String): String {
+        repository.update(record.copy(done = true))
+        clearTodoDisambiguationState()
+        clearPendingReminderTodo()
+        return confirmation
+    }
+
+    private fun clearTodoDisambiguationState() {
+        pendingTodoCandidates = null
+        if (followUpContext == FollowUpContext.TODO_DISAMBIGUATION) {
+            followUpContext = FollowUpContext.NONE
             syncFollowUpUiState()
         }
     }
@@ -1294,6 +1800,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun replaceLastAssistantMessage(text: String) {
+        _uiState.update { state ->
+            val messages = state.messages.toMutableList()
+            val index = messages.indexOfLast { it.role == ChatRole.ASSISTANT }
+            if (index >= 0) {
+                messages[index] = messages[index].copy(text = text, isError = false)
+            } else {
+                messages.add(ChatMessage.assistant(text))
+            }
+            state.copy(messages = messages)
+        }
+    }
+
     private fun replaceLastStatusMessage(text: String) {
 
         _uiState.update { state ->
@@ -1330,12 +1849,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
 
-    private fun detectAction(text: String): VoiceAction {
-        val lastAssistantMessage = _uiState.value.messages
-            .filterNot { it.isPartial || it.isError }
-            .lastOrNull { it.role == ChatRole.ASSISTANT }
-            ?.text
-        return VoiceIntentDetector.detect(text, lastAssistantMessage, followUpContext)
+    private fun detectAction(@Suppress("UNUSED_PARAMETER") text: String): VoiceAction =
+        VoiceIntentDetector.detect(followUpContext)
+
+    private fun releasePhaseFromProcessing() {
+        _uiState.update { state ->
+            when (state.phase) {
+                AppPhase.PROCESSING, AppPhase.SENDING ->
+                    state.copy(phase = AppPhase.IDLE, isListening = false)
+                else -> state
+            }
+        }
     }
 
     private fun speakAssistantText(

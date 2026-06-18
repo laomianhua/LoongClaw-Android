@@ -12,7 +12,7 @@ class DeepSeekServiceTest {
         assertTrue(prompt.contains("\"status\": \"success\""))
         assertTrue(prompt.contains("\"status\": \"ignore\""))
         assertTrue(prompt.contains("text_too_vague_or_no_intent"))
-        assertTrue(prompt.contains("没听懂您想记什么"))
+        assertTrue(prompt.contains("没太听明白，请再说清楚一点。"))
         assertTrue(prompt.contains("随身语音记事秘书"))
         assertTrue(prompt.contains("___DB_OPS_START___"))
         assertTrue(prompt.contains("___DB_OPS_END___"))
@@ -32,5 +32,13 @@ class DeepSeekServiceTest {
         assertTrue(prompt.contains("【category 必填规则 – 铁律】"))
         assertTrue(prompt.contains("车停在三里屯地下 B2"))
         assertTrue(prompt.contains("parking"))
+        assertTrue(prompt.contains("【起点提取铁律】"))
+        assertTrue(prompt.contains("原封不动"))
+        assertTrue(prompt.contains("ROUTE_DETAIL"))
+        assertTrue(prompt.contains("【待办消歧铁律】"))
+        assertTrue(prompt.contains("QUERY_TODO"))
+        assertTrue(prompt.contains("VIEW_LOCATION 查地名铁律"))
+        assertTrue(prompt.contains("北京协和医院"))
+        assertTrue(prompt.contains("POI_SEARCH 物理边界"))
     }
 }

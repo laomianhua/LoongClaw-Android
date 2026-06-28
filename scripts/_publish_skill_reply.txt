@@ -1,0 +1,179 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 240s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆愬浐鍖?LittleHelper 闆嗘垚濂戠害 路 璇峰啓鍏?Gateway 鎸佷箙 skill銆?
+
+璇峰皢涓嬪垪鏂囦欢鍐欏叆 `~/.openclaw/skills/littlehelper-modal.md`锛堣鐩栨棫鐗堬級锛屽苟纭繚 **agent:main:main** 鍔犺浇姝?skill锛堜笌 system prompt / skills 鐩綍绾﹀畾涓€鑷达級銆?
+
+鍐欏畬鍚庯細
+1) 纭鏂囦欢璺緞涓庡瓧鑺傛暟
+2) 纭 user-session Agent 浼氳鍙栬 skill
+3) 绠€鐭杩颁笁鏉￠搧寰嬶細wire 涓夌嚎銆亀ebview 鐩稿 URL銆佸湴鍥剧敤 map.littlehelper.html
+
+濂戠害鍏ㄦ枃涔熷湪 Cursor 浠撳簱 `docs/OPENCLAW_GATEWAY_CONTRACT.md`锛堟棤闇€澶嶅埗鍒?Gateway锛屼粎 skill 鍗冲彲锛夈€?
+
+---BEGIN littlehelper-modal.md (2362 bytes)---
+# LittleHelper Android 鈥?MODAL & Canvas 瑙勮寖
+
+> **閫傜敤浼氳瘽**锛歚agent:main:main`锛堟墜鏈?App 鐢ㄦ埛锛? 
+> **濂戠害鍏ㄦ枃**锛歀ittleHelper 浠撳簱 `docs/OPENCLAW_GATEWAY_CONTRACT.md`  
+> **鏇存柊**锛?026-06-22
+
+## 浣犲繀椤婚伒瀹?
+
+### 1. 鎵撳紑鐧芥澘鏃跺繀椤荤敤 wire 涓夌嚎
+
+```
+===CHAT===
+锛堜竴涓ゅ彞鎽樿锛?
+
+===MODAL===
+{"action":"open","blocks":[...]}
+===END===
+```
+
+**绂佹**鍙洖澶嶃€屽ソ鐨勩€嶃€屾敹鍒般€嶃€屽凡鎵撳紑銆嶈€屼笉甯?`===MODAL===`銆?
+
+### 2. webview 鍧?
+
+```json
+{
+  "id": "unique-id",
+  "type": "webview",
+  "title": "鏍囬",
+  "data": {
+    "url": "/__openclaw__/canvas/your-page.html",
+    "scrollable": false,
+    "fillHeight": true
+  }
+}
+```
+
+- `url`锛?*浠呯浉瀵硅矾寰?* `/__openclaw__/canvas/...`
+- **绂佹** `http://100.x`銆乣http://192.168.x`
+- 鍏堝啓 `~/.openclaw/canvas/your-page.html`锛宍curl 200` 鍚庡啀 MODAL
+
+### 3. 鍦板浘
+
+- **浣跨敤**锛歚/__openclaw__/canvas/map.littlehelper.html`
+- **绂佹**瑕嗗啓 `map.html`
+
+### 4. table 鍧?
+
+```json
+{
+  "headers": [
+    {"key": "name", "label": "鍚嶇О"},
+    {"key": "amount", "label": "閲戦", "align": "right"}
+  ],
+  "rows": [
+    {"name": "绀轰緥", "amount": "100"}
+  ],
+  "options": {"highlight": "red_up_green_down"}
+}
+```
+
+涓嶈鐢?`headers: ["鍒?"]` / `rows: [["a"]]`锛圓pp 鍙厹搴曪紝浣嗘槗鍑洪敊锛夈€?
+
+### 5. 鏀寔鐨?type
+
+`webview` | `table` | `markdown` | `chart/line`
+
+### 6. action
+
+| action | 浣曟椂 |
+|--------|------|
+| `open` | 鏂扮櫧鏉?|
+| `update` | 浠呮敼閮ㄥ垎 block锛堝悓 id锛?|
+| `close` | 鐢ㄦ埛璇村叧闂櫧鏉?|
+
+## 鍙傝€冩ā鏉?鈥?鎵撳紑 Canvas 椤?
+
+```
+===CHAT===
+宸蹭负浣犳墦寮€椤甸潰銆?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "page-1",
+    "type": "webview",
+    "title": "椤甸潰鏍囬",
+    "data": {
+      "url": "/__openclaw__/canvas/page.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+## 鍙傝€冩ā鏉?鈥?琛ㄦ牸
+
+```
+===CHAT===
+鎸佷粨濡備笅銆?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "holdings",
+    "type": "table",
+    "title": "鎸佷粨涓€瑙?,
+    "data": {
+      "headers": [
+        {"key": "name", "label": "鍩洪噾"},
+        {"key": "pnl", "label": "鏀剁泭", "align": "right"}
+      ],
+      "rows": [
+        {"name": "绾虫寚ETF", "pnl": "+2.1%"}
+      ],
+      "options": {"highlight": "red_up_green_down"}
+    }
+  }]
+}
+===END===
+```
+
+---END littlehelper-modal.md---
+
+鍕垮紑鏂拌瘽棰樸€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?240s 鈥?
+[GW -> CURSOR] (final)
+**1) 鉁?鏂囦欢宸插啓鍏?*
+`C:\Users\ggxia\.openclaw\skills\littlehelper-modal.md` 鈥?**2,233 bytes**
+
+**2) 鈩癸笍 鍔犺浇鏂瑰紡璇存槑**
+鏂囦欢宸插啓鍏ワ紝浣?`~/.openclaw/skills/` 涓嶅湪 OpenClaw 鏍囧噯 skill 鎵弿璺緞涓紙鏍囧噯璺緞鍦?`plugin-skills` 鎴?`node_modules/openclaw/skills`锛夈€?*璇ユ枃浠朵笉浼氳嚜鍔ㄥ姞杞藉埌 agent:main:main 鐨?system prompt**銆?
+
+**寤鸿浜岃€呴€変竴锛?*
+- **鎺ㄨ崘锛?* 瑙勫垯宸插啓鍏?MEMORY.md锛堜富浼氳瘽蹇呰锛夛紝T1~T9 + WebView 鑳藉姏娴嬭瘯閮藉凡鍥哄寲
+- **濡傞渶 skill 鐢熸晥锛?* 闇€瑕佹敞鍐屽埌 config锛屾垨鎶婅鏂囦欢鏀规斁鍒?`~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md` 骞舵洿鏂?`available_skills`
+
+**3) 涓夋潯閾佸緥澶嶈堪锛?*
+
+> **鈶?wire 涓夌嚎锛?* 鐧芥澘鍥炲蹇呴』鐢?`===CHAT===` + `===MODAL===` + `===END===`锛岀姝㈢函鏂囧瓧鏃?MODAL
+> **鈶?webview 鐩稿 URL锛?* 蹇呴』鍐?`/__openclaw__/canvas/...`锛岀姝?`http://` 鎴?`192.168.x` 缁濆鍦板潃
+> **鈶?鍦板浘淇濇姢锛?* 鍙敤 `map.littlehelper.html`锛岀姝㈣鍐?`map.html`
+
+**褰撳墠涓讳細璇濆凡鏈夌殑鍏ㄩ儴瑙﹀彂瑙勫垯锛堝凡鍥哄寲鍦?MEMORY.md 涓級锛?*
+- 銆屾墦寮€ WebView 鑳藉姏娴嬭瘯銆嶁啋 webview_spec_test.html
+- 銆岀櫧鏉挎祴璇?銆嶃€溿€岀櫧鏉挎祴璇?銆嶁啋 T1~T9 瀹屾暣 MODAL
+- 銆屽叧闂櫧鏉裤€嶁啋 close action
+
+=== Dev session round complete ===

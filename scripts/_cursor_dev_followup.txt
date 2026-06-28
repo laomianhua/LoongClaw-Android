@@ -1,0 +1,1 @@
+请不要再「让我读文档/正在检查」。你已有 huating.html 和 parking.html，请直接输出两段 markdown 表格（各 7 行：URL路径、Leaflet源、tile源、硬编码host、height CSS、curl状态、修复方案）。若 parking 就是降级版请标注。最后一行写：可否手机实测 + 用户说什么话触发。

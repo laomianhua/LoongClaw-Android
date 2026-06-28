@@ -1,0 +1,45 @@
+【紧急 · T1/T2 真机失败 · 白板未刷新】
+
+老夏真机复现：说「白板测试1」「白板测试2」后，聊天气泡有更新，但白板仍显示上一次 webview_spec_test 地图，未切换内容。
+
+Cursor 用 probe 模拟 agent:main:main 结论：
+- 「白板测试1」→ 你只回复了「收到 ✓」，**无 ===MODAL===**
+- 「白板测试2」→ 只有 toolCall exec，**无 MODAL 终帧**
+
+App 行为正确：未收到新 MODAL 时保留上一帧白板内容。不是 App WebView 卡死。
+
+请立即修复 user-session Agent：
+
+1) 为触发语建立硬规则（写入 agent 指令/skill）：
+   「白板测试1」→ 必须发布 canvas/t1_static.html + 发 OPEN webview MODAL
+   「白板测试2」→ 必须发 OPEN table MODAL（无需 webview）
+   禁止只回「收到」或只跑 tool 不发 MODAL
+
+2) T1 立即执行：
+   - 写 ~/.openclaw/canvas/t1_static.html（大标题+彩色按钮+JS 显示时间）
+   - curl 200 后回复：
+
+===CHAT===
+T1 静态页已打开。
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "t1-static",
+    "type": "webview",
+    "title": "T1 静态 WebView",
+    "data": {
+      "url": "/__openclaw__/canvas/t1_static.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+
+3) T2 立即执行：同上格式，type:table，3 行假持仓数据（headers+rows），block id=t2-table
+
+4) 回复确认：t1_static.html 是否已 200；老夏可马上重试。
+
+勿开新话题。

@@ -1,0 +1,115 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆怢ittleHelper 鐧芥澘鑱旇皟 路 Phase 2 路 Gateway 鑷富鐢熸垚鍐呭娴嬭瘯璁″垝銆?
+
+鑳屾櫙锛歸ebview_spec_test.html 宸插湪鑰佸鐪熸満閫氳繃锛堢摝鐗囨弧灞忋€丮ODAL 鑷姩寮圭櫧鏉匡級銆侫pp 涓存椂鏈湴娴嬭瘯浠ｇ爜宸插垹闄ゃ€傜幇杩涘叆 Phase 2锛氱敱 Gateway Agent 鑷富鐢熸垚/鍙戝竷 Canvas 鍐呭锛岄獙璇佸悇绫?MODAL block銆?
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+涓€銆佸叏灞€瑙勫垯锛坲ser-session agent:main:main锛屾瘡娆″繀瀹堬級
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+1. 鍥炲鏍煎紡蹇呴』鏄?wire 涓夌嚎锛?
+   ===CHAT===
+   锛堜竴涓ゅ彞鎽樿锛屼笉瑕佽创 JSON/琛ㄦ牸/Markdown 姝ｆ枃锛?
+
+   ===MODAL===
+   { "action": "open|update|close", "blocks": [...] }
+
+   ===END===
+
+2. webview 鐨?data.url 蹇呴』鐢ㄧ浉瀵硅矾寰勶細
+   "/__openclaw__/canvas/<file>.html"
+   绂佹鍐?http://100.x 鎴?192.168.x锛圓pp 浼氭嫾 gatewayBaseUrl锛?
+
+3. 鍗曢〉 webview 蹇呴』锛?
+   "scrollable": false, "fillHeight": true
+
+4. 鍦板浘鍙敤鍙椾繚鎶ゅ壇鏈紙App 浼氶噸瀹氬悜 map.html锛夛細
+   "/__openclaw__/canvas/map.littlehelper.html"
+   绂佹瑕嗗啓 map.html
+
+5. 鍙戝竷 HTML 鍓嶅厛鍐欏叆 ~/.openclaw/canvas/锛宑url 200 鍚庡啀 MODAL
+
+6. App 鏀寔鐨?block.type锛?
+   webview | table | markdown | chart/line
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+浜屻€佹祴璇曠敤渚嬶紙璇烽€愭潯鍑嗗锛岃€佸鍦?App 閲岃瑙﹀彂璇級
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+銆怲1 闈欐€?WebView銆?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆嶆垨銆屾墦寮€闈欐€佺綉椤垫祴璇曘€?
+浣犵殑鍔ㄤ綔锛?
+- 鐢熸垚骞跺彂甯?canvas/t1_static.html锛堝ぇ鏍囬 + 褰╄壊鎸夐挳 + 褰撳墠鏃堕棿 JS锛?
+- MODAL 鍗?block webview锛宖illHeight true
+楠屾敹锛氱櫧搴曟爣棰樺彲瑙併€佹寜閽彲鐐广€佹椂闂翠細鍙?
+
+銆怲2 琛ㄦ牸 block銆?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆嶆垨銆屾墦寮€鎸佷粨琛ㄦ牸娴嬭瘯銆?
+浣犵殑鍔ㄤ綔锛歁ODAL 鍚?type:table锛堝弬鑰?headers/rows 缁撴瀯锛? 琛屽亣鏁版嵁鍗冲彲锛?
+楠屾敹锛氳〃鏍煎湪鐧芥澘鍐咃紝鑱婂ぉ姘旀场鍙湁鎽樿鏃?| 绠￠亾绗?
+
+銆怲3 Markdown block銆?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆?
+浣犵殑鍔ㄤ綔锛歁ODAL 鍚?type:markdown锛宒ata.content 鍚?**绮椾綋**銆佸垪琛ㄣ€佷唬鐮佸潡
+楠屾敹锛歁arkdown 娓叉煋姝ｅ父
+
+銆怲4 鎶樼嚎鍥惧崰浣嶃€?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆?
+浣犵殑鍔ㄤ綔锛歁ODAL 鍚?type:chart/line锛宻eries 鑷冲皯 1 鏉?5 涓偣
+楠屾敹锛氭姌绾垮浘鍗犱綅 UI 鏄剧ず锛堜笉蹇呯湡 ECharts锛?
+
+銆怲5 缁勫悎鐧芥澘銆?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆?
+浣犵殑鍔ㄤ綔锛歁ODAL 鍚?table + chart/line 涓や釜 block锛堝悓鎸佷粨 Demo锛?
+楠屾敹锛氱櫧鏉垮唴涓婁笅涓ゅ潡閮藉彲瑙?
+
+銆怲6 鍔ㄦ€?WebView锛圓gent 鐜板満鍐?HTML锛夈€?
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆?
+浣犵殑鍔ㄤ綔锛氱幇鍦哄啓 canvas/t6_dynamic.html锛堝惈 flex 甯冨眬 + canvas 鐢诲渾 + 璁℃暟鍣ㄦ寜閽級锛屽彂甯冨悗鍙?MODAL
+楠屾敹锛氫笌 T1 涓嶅悓锛岃瘉鏄庝綘鑳藉姩鎬佺敓鎴愯€岄潪鍙鍥哄畾鏂囦欢
+
+銆怲7 鐪熷湴鍥俱€?
+瑙﹀彂璇細銆屾墦寮€鍗庝涵鍢夊洯鍦板浘銆?
+浣犵殑鍔ㄤ綔锛歁ODAL webview url=map.littlehelper.html锛宖illHeight true
+楠屾敹锛氶珮寰风摝鐗囧湴鍥撅紙闈炶鍖虹ず鎰忓浘锛?
+
+銆怲8 鏇存柊鐧芥澘銆?
+鍓嶇疆锛歍5 宸叉墦寮€
+瑙﹀彂璇細銆岀櫧鏉挎祴璇?銆嶆垨銆屽姞鏉″潎绾裤€?
+浣犵殑鍔ㄤ綔锛歛ction:update锛屽彧鏇存柊 chart block锛堝姞绗簩鏉?series 铏氱嚎锛?
+楠屾敹锛氳〃鏍间粛鍦紝鍥捐〃澶氫竴鏉＄嚎
+
+銆怲9 鍏抽棴鐧芥澘銆?
+瑙﹀彂璇細銆屽叧闂櫧鏉裤€?
+浣犵殑鍔ㄤ綔锛歛ction:close锛宐locks 鍙┖
+楠屾敹锛氱櫧鏉挎敹璧凤紝鑱婂ぉ浠嶅彲瑙?
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+涓夈€佽浣狅紙dev 浼氳瘽锛夌幇鍦ㄥ洖澶?
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+1. 纭宸茬悊瑙ｄ笂杩?9 椤规祴璇曡鍒?
+2. 璇存槑 T1 鐨?t1_static.html 鏄惁宸插啓濂斤紙鎴栬鍒掍綍鏃跺啓濂斤級
+3. 缁欒€佸涓€鍙ヨ瘽锛氥€屼粠 T1 寮€濮嬶紝鍦?App 璇达細鐧芥澘娴嬭瘯1銆?
+4. 鑻ラ渶瑕?Cursor 鍗忓姪鐢熸垚鏌愪釜 HTML 妯℃澘锛屽垪鍑烘枃浠跺悕
+
+鍕夸富鍔ㄥ紑鏂拌瘽棰樸€傝€佸浼氭寜 T1鈫扵9 鍦ㄧ湡鏈洪€愰」楠屾敹骞跺弽棣堛€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+宸茬悊瑙ｅ叏閮?9 椤规祴璇曡鍒掋€俆1 鐨?HTML 鎴戠幇鍦虹敓鎴愬苟鍙戝竷锛岀珛鍒婚獙璇併€?
+
+=== Dev session round complete ===

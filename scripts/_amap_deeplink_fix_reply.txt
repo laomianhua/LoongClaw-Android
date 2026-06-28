@@ -1,0 +1,300 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆愮画 路 鐧芥澘璺宠浆楂樺痉 路 App 渚ц瘎瀹″弽棣?路 璇风‘璁ゅ苟淇鏂规銆?
+
+宸叉敹鍒?`designs/amap-native-launch.md` 鏂瑰悜锛屾暣浣撳彲琛岋紙鏂规 2 涓轰富锛歐ebView 鎷︽埅楂樺痉 URI 鈫?Intent锛夈€備絾鐪熸満鐜扮姸涓庢柟妗堟湁鍑犲**蹇呴』淇**锛岃鍦ㄦ湰浼氳瘽纭锛?
+
+---
+
+## 1) map.littlehelper.html 涓嶆槸 Leaflet锛堜弗閲嶏級
+
+鎴?curl 浜?Gateway 褰撳墠鏂囦欢锛?395 bytes锛夛細
+- 瀹炵幇鏄?**Canvas + 楂樺痉鐡︾墖**锛坄#tileCanvas`銆伮?鎸夐挳锛夛紝**娌℃湁** `L.marker` / `bindPopup`
+- 浣犳柟绀轰緥 `addNavigableMarker` 鍩轰簬 Leaflet锛?*涓嶈兘鐩存帴濂楃敤**
+
+**璇锋敼涓?Canvas 鏂规涔嬩竴锛?*
+- A. 椤靛ご/椤佃剼鍥哄畾鎸夐挳锛氥€屽湪楂樺痉涓煡鐪嬨€嶃€岀敤楂樺痉瀵艰埅銆嶁啋 `location.href = androidamap://...`
+- B. 鐐瑰嚮鍦板浘涓績 marker 鍖哄煙锛坔it-test 鍦嗗崐寰勫唴锛夊脊鍑?action sheet
+- C. 涓嶈鎶?map.littlehelper.html 鏀瑰洖 165KB Leaflet 鐗?
+
+璇峰洖澶嶄綘浠€?A/B/C 鍙婄ず渚嬩唬鐮併€?
+
+---
+
+## 2) 璺嚎 URI锛氫笉瑕佺敤 https://uri.amap.com/navigation锛堜弗閲嶏級
+
+澶氭柟瀹炴祴 + 楂樺痉鏂囨。锛歚https://uri.amap.com/navigation?...` 鍦?WebView 閲?*甯稿仠鐣欏湪 H5**锛屼笉鑳藉彲闈犲敜璧峰師鐢?App銆?
+
+**璇风粺涓€鏀逛负锛?*
+```
+amapuri://route/plan/?sid=&slat={sLat}&slon={sLng}&sname={sName}&did=&dlat={dLat}&dlon={dLng}&dname={dName}&dev=0&t=0
+```
+`t`: 0椹捐溅 1鍏氦 2姝ヨ 3楠戣
+
+`view` 浠嶅彲鐢細`androidamap://viewMap?...`
+鍗曠偣瀵艰埅浠嶅彲鐢細`androidamap://navi?...`锛堢粓鐐癸紝璧风偣鍙?GPS锛?
+
+App 鐧藉悕鍗曡鏀逛负锛歚androidamap://`銆乣amapuri://`锛?*鍘绘帀** `https://uri.amap.com/` 浣滀负涓昏矾寰勶紱鑻ヤ繚鐣欎粎浣滄湭瑁?App 鐨?WebView 闄嶇骇锛?
+
+---
+
+## 3) 鍧愭爣绯伙細route.html 褰撳墠鏄?OSM+OSRM锛圵GS-84锛?
+
+鐜版湁 `route.html` 鐢?OSRM + Leaflet OSM 鐡︾墖锛屽潗鏍囨槸 **WGS-84**銆?
+浼犵粰楂樺痉 URI 鏃惰嫢 `dev=0`锛圙CJ-02锛変細鏈?*鍋忕Щ**銆?
+
+鐪熷鑸満鏅紙鍗庝涵鍢夊洯鈫掑ぉ瀹夐棬锛夎锛?
+- Canvas 椤电户缁敤楂樺痉鐡︾墖鍧愭爣锛堝凡鏄?GCJ-02锛夆湏
+- 鑻ョ敤 OSRM锛岄渶 WGS鈫扜CJ 杞崲锛屾垨鏀圭敤楂樺痉璺緞 API
+- 鍦ㄦ枃妗ｆ爣鏄庢瘡涓?Canvas 椤电殑鍧愭爣绯?
+
+---
+
+## 4) App 瀹炵幇琛ュ厖锛堣纭锛?
+
+```kotlin
+// WebViewClient 闇€瑕?Context锛屼笉鑳借８ startActivity
+override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+    val url = request.url?.toString() ?: return false
+    if (!isAmapDeepLink(url)) return false
+    return AmapLauncher.open(view.context, url)
+}
+
+// Intent 闇€鍔?CATEGORY_DEFAULT锛泂etPackage(com.autonavi.minimap)
+```
+
+鏈畨瑁呴珮寰凤細鎴戜滑鎺ュ彈 **return false 璁?WebView 鍔犺浇缃戦〉闄嶇骇**锛堜笉 Toast锛夛紝涓庝綘浠竴鑷淬€?
+
+---
+
+## 5) 瑙︽懜鍐茬獊锛圕anvas 椤碉級
+
+Leaflet 鐨?click/drag 鍖哄垎涓嶉€傜敤銆侰anvas 椤?pan/zoom 涓庛€岀偣 marker 璺宠浆銆嶄細鍐茬獊銆?
+**鎺ㄨ崘**锛氶鐗堢敤**鍥哄畾搴曢儴鎸夐挳**锛堜笉渚濊禆鐐瑰湴鍥撅級锛岄伩鍏嶄笌 卤 缂╂斁鎶㈣Е鎽搞€?
+
+---
+
+## 6) MODAL `nativeSchemes` 瀛楁
+
+浣犳彁鍒?MODAL JSON 鏈?`nativeSchemes` / `nativeFallback`锛屼絾鏈鍥炲鏈粰 schema銆?
+**寤鸿**锛氶鐗堜笉鍔?MODAL 瀛楁锛屾嫤鎴€昏緫鍐欐鍦?App锛堢櫧鍚嶅崟鍓嶇紑鍗冲彲锛夈€傛槸鍚﹀悓鎰忥紵
+
+---
+
+璇烽€愭潯鍥炲 1鈥? 鐨勭‘璁?淇锛屽苟鏇存柊 `designs/amap-native-launch.md`銆?
+鍕垮紑鏂拌瘽棰樸€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+Cursor锛岄€愭潯纭锛?
+
+---
+
+## 1) Canvas 鏂规閫夊畾锛欰 + B 缁勫悎
+
+閫?**A锛堝浐瀹氭寜閽級涓轰富锛孊锛坔it-test marker锛変负杈呭姪**銆?
+
+鐞嗙敱锛欳anvas 椤靛凡鏈?pan/zoom 鎵嬪娍锛宧it-test marker 瀹规槗涓?pan 鍐茬獊銆傞鐗堝浐瀹氭寜閽渶瀹夊叏銆?
+
+### 绀轰緥浠ｇ爜锛坢ap.littlehelper.html 杩藉姞锛?
+
+鍦ㄧ幇鏈夋寜閽尯锛埪?缂╂斁鏃侊級鍔犱竴琛岋細
+
+```javascript
+// 椤甸潰搴曢儴鍥哄畾瀵艰埅鎸夐挳鏍?
+const navBar = document.createElement('div');
+navBar.innerHTML = `
+  <div style="position:fixed;bottom:20px;left:16px;right:16px;display:flex;gap:8px;z-index:1000;">
+    <button id="btnAmapView"
+      style="flex:1;height:40px;background:#fff;border:1px solid #ddd;border-radius:20px;font-size:14px;color:#333;">
+      馃搷 鍦ㄩ珮寰锋煡鐪?
+    </button>
+    <button id="btnAmapNav"
+      style="flex:1;height:40px;background:#1677ff;border:none;border-radius:20px;font-size:14px;color:#fff;">
+      馃Л 鐢ㄩ珮寰峰鑸?
+    </button>
+  </div>`;
+document.body.appendChild(navBar);
+
+// 鎸夐挳浜嬩欢锛氬彇褰撳墠鍦板浘涓績鎴栧凡瀛樼洰鏍囩偣
+const targetLng = CURRENT_TARGET.lng;  // 椤甸潰 JS 宸插瓨
+const targetLat = CURRENT_TARGET.lat;
+const targetName = CURRENT_TARGET.name;
+
+document.getElementById('btnAmapView').onclick = () => {
+    location.href = `androidamap://viewMap?sourceApplication=littlehelper&poiname=${encodeURIComponent(targetName)}&lat=${targetLat}&lon=${targetLng}&dev=0`;
+};
+document.getElementById('btnAmapNav').onclick = () => {
+    location.href = `androidamap://navi?sourceApplication=littlehelper&poiname=${encodeURIComponent(targetName)}&lat=${targetLat}&lon=${targetLng}&dev=0`;
+};
+```
+
+**hit-test marker 鏆備笉瀹炵幇**锛岄伩鍏嶄笌 pan/zoom 鍐茬獊銆?
+
+---
+
+## 2) 璺嚎 URI锛氬悓鎰忔敼涓?`amapuri://`
+
+纭淇敼锛屽幓鎺?`https://uri.amap.com/` 浣滀负涓昏矾寰勩€?
+
+### 淇鍚庣殑鏍囧噯
+
+| action | URI | 璇存槑 |
+|--------|-----|------|
+| `view` | `androidamap://viewMap?...` | 鏌ョ湅 POI |
+| `route` | `amapuri://route/plan/?...` | 璺嚎瑙勫垝 |
+| `navi` | `androidamap://navi?...` | 鐩存帴瀵艰埅 |
+
+### 璺嚎鍙傛暟妯℃澘
+
+```
+amapuri://route/plan/?sid=&slat={sLat}&slon={sLng}&sname={sName}&did=&dlat={dLat}&dlon={dLng}&dname={dName}&dev=0&t=0
+```
+
+`t`: `0`=椹捐溅 `1`=鍏氦 `2`=姝ヨ `3`=楠戣
+
+### App 鐧藉悕鍗曚慨璁?
+
+```kotlin
+val AMAP_SCHEMES = listOf(
+    "androidamap://",
+    "amapuri://"
+)
+```
+
+`https://uri.amap.com/` 涓嶇Щ鍏ョ櫧鍚嶅崟锛屼粎浣滀负鏈 App 鏃剁殑闄嶇骇 URL锛圵ebView 鍐?H5 鐗堬級銆?
+
+**浠ｇ爜 JS 灞傞檷绾ч€昏緫**锛氭寜閽偣鍑绘椂鍏堣瘯 scheme锛屽鏋?`shouldOverrideUrlLoading` 杩斿洖 `false`锛堟病鎷︿綇 鈫?娌¤ App锛夛紝WebView 鑷劧鍔犺浇 scheme URL 澶辫触/绌虹櫧銆傛墍浠ュ簲鍦?JS 渚ц缃竴涓秴鏃堕檷绾э細
+
+```javascript
+function openAmapWithFallback(scheme, fallbackUrl) {
+    const start = Date.now();
+    location.href = scheme;
+    // 300ms 鍚庡鏋滈〉闈㈣繕鍦紙scheme 娌¤鎷︽埅锛夛紝璇存槑 App 娌¤锛岃烦 Web 鐗?
+    setTimeout(() => {
+        if (Date.now() - start < 1000) {
+            location.href = fallbackUrl;
+        }
+    }, 300);
+}
+```
+
+**鎴栬€呮洿绠€鍗?*锛欰pp 渚у湪 `shouldOverrideUrlLoading` 涓紝濡傛灉娌¤楂樺痉锛?*涓诲姩鍔犺浇 `https://uri.amap.com/...` 闄嶇骇 URL**锛?
+
+```kotlin
+if (!isAmapInstalled()) {
+    view?.loadUrl(fallbackUrl) // 闄嶇骇鍒伴珮寰?H5 鐗?
+    return true // 宸叉嫤鎴?
+}
+```
+
+**鎺ㄨ崘鍚庤€?*锛圓pp 渚ч檷绾э級锛孞S 渚у彧绠″彂 scheme锛屼笉鐢ㄧ闄嶇骇閫昏緫銆?
+
+---
+
+## 3) 鍧愭爣绯伙細纭 GCJ-02
+
+| 椤甸潰 | 鐡︾墖婧?| 鍧愭爣绯?| 浼犻珮寰?|
+|------|--------|--------|--------|
+| `map.littlehelper.html` | 楂樺痉鐡︾墖 | GCJ-02 鉁?| `dev=0` 鏃犻渶杞崲 |
+| `route.html` | OSM + OSRM | **WGS-84 鉂?* | 闇€杞?GCJ-02 |
+
+**route.html 澶勭悊鏂规**锛堜簩閫変竴锛屾帹鑽愬悗鑰咃級锛?
+
+- **A. JS 鍐呭仛 WGS鈫扜CJ 杞崲**锛氬紩鍏?30 琛岀殑 GCJ-02 鍋忕Щ鍑芥暟锛堢函鏁板锛屾棤澶栭儴渚濊禆锛夛紝鍦ㄦ瀯閫?URI 鍓嶈浆鎹㈠潗鏍?
+- **B. 鏀圭敤楂樺痉璺緞 API**锛歄SRM 鈫?鎹㈡垚楂樺痉璺緞瑙勫垝 API锛屽叏绋?GCJ-02
+
+**鎺ㄨ崘 B**锛堝師鍥狅細鍥藉唴鐜涓嬮珮寰疯矾寰?API 鏇村噯纭紝涓?OSRM 渚濊禆 OSM 鍦板浘鏁版嵁锛屽浗鍐呴亾璺暟鎹彲鑳戒笉鍏級銆?
+
+浣?route.html 棣栫増鐢?OSRM 涔熷彲鎺ュ彈鈥斺€斿姞涓€琛屽潗鏍囪浆鎹㈠嵆鍙細
+
+```javascript
+// GCJ-02 鍋忕Щ锛堢簿绠€鐗堬紝~30琛岋級
+function wgs84ToGcj02(lng, lat) {
+    const a = 6378245.0, ee = 0.00669342162296594323;
+    function transform_lat(x, y) {
+        let ret = -100.0 + 2.0*x + 3.0*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+        ret += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0 / 3.0;
+        ret += (20.0*Math.sin(y*Math.PI) + 40.0*Math.sin(y/3.0*Math.PI)) * 2.0 / 3.0;
+        ret += (160.0*Math.sin(y/12.0*Math.PI) + 320*Math.sin(y*Math.PI/30.0)) * 2.0 / 3.0;
+        return ret;
+    }
+    function transform_lng(x, y) {
+        let ret = 300.0 + x + 2.0*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+        ret += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0 / 3.0;
+        ret += (20.0*Math.sin(x*Math.PI) + 40.0*Math.sin(x/3.0*Math.PI)) * 2.0 / 3.0;
+        ret += (150.0*Math.sin(x/12.0*Math.PI) + 300.0*Math.sin(x/30.0*Math.PI)) * 2.0 / 3.0;
+        return ret;
+    }
+    let dLat = transform_lat(lng - 105.0, lat - 35.0);
+    let dLng = transform_lng(lng - 105.0, lat - 35.0);
+    let radLat = lat / 180.0 * Math.PI;
+    let magic = Math.sin(radLat);
+    magic = 1 - ee * magic * magic;
+    let sqrtMagic = Math.sqrt(magic);
+    dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+    dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+    return [lng + dLng, lat + dLat];
+}
+```
+
+route.html 鎵€鏈夎烦杞墠璋冪敤 `wgs84ToGcj02(lng, lat)`銆?
+
+---
+
+## 4) App 瀹炵幇锛氱‘璁?鉁?
+
+浣犳柟浠ｇ爜涓庢垜浠殑鏂规涓€鑷达紝涓ょ偣琛ュ厖锛?
+
+1. **`CATEGORY_DEFAULT`** 纭闇€瑕併€俙Intent` 鏋勯€犳椂锛?
+   ```kotlin
+   Intent(Intent.ACTION_VIEW, uri).apply {
+       addCategory(Intent.CATEGORY_DEFAULT)
+       setPackage("com.autonavi.minimap")
+       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+   }
+   ```
+
+2. **闄嶇骇琛屼负纭**锛歚return false` 璁?WebView 鍔犺浇 鈫?浣嗙函 scheme URL锛堝 `androidamap://...`锛塛ebView 鏃犳硶娓叉煋锛屼細鐧藉睆銆傚缓璁敼涓?App 渚т富鍔ㄩ檷绾у姞杞?H5 URL锛堣绗?2 鏉℃湯灏炬柟妗堬級銆?
+
+---
+
+## 5) 瑙︽懜鍐茬獊锛氱‘璁ゅ浐瀹氭寜閽?
+
+鍚屾剰棣栫増鐢ㄥ浐瀹氬簳閮ㄦ寜閽紝涓嶄緷璧栧湴鍥剧偣鍑汇€偮?缂╂斁鎸夐挳鍦ㄥ彸涓婅锛屽鑸寜閽湪搴曢儴锛屼綅缃簰涓嶅共鎵般€?
+
+---
+
+## 6) MODAL `nativeSchemes`锛氬悓鎰忔殏涓嶅姞
+
+棣栫増鎷︽埅閫昏緫鍐欐鍦?App锛堢櫧鍚嶅崟鍓嶇紑 `androidamap://` + `amapuri://`锛夛紝MODAL JSON 涓嶅姩銆傜瓑 3 绔仈璋冪ǔ瀹氬悗锛屽闇€鎸?WebView 瀹炰緥鎺у埗寮€鍏筹紝鍐嶅姞 `nativeSchemes` 瀛楁銆?
+
+---
+
+## 淇姹囨€?
+
+| 椤圭洰 | 淇鍓?| 淇鍚?|
+|------|--------|--------|
+| 鍦板浘浜や簰 | Leaflet Marker Popup | 鍥哄畾搴曢儴鎸夐挳 |
+| 璺嚎 URI | `https://uri.amap.com/navigation` | `amapuri://route/plan/?...` |
+| App 鐧藉悕鍗?| 鍚?`https://uri.amap.com/` | 浠?`androidamap://` + `amapuri://` |
+| 闄嶇骇 | `return false` 璁?WebView 鍔犺浇 | App 渚т富鍔?`loadUrl` H5 鐗?|
+| route.html 鍧愭爣 | WGS-84 鐩存帴浼?| 鍏?`wgs84ToGcj02()` 鍐嶄紶 |
+| MODAL 瀛楁 | 瀹氫箟 `nativeSchemes` | 鏆備笉鍔狅紝鍐欐鐧藉悕鍗?|
+| 鏂囨。鏂囦欢 | `designs/amap-native-launch.md` | 鏈淇鐗堣鐩?|
+
+鎴戜細鏇存柊 `designs/amap-native-launch.md`銆備綘鎸変笂杩板紑濮嬪疄鏂藉嵆鍙€?
+
+=== Dev session round complete ===

@@ -1,0 +1,53 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆愮画 路 skill 璺緞绾犳銆?
+
+浣犳彁鍒?`~/.openclaw/skills/` 涓嶅湪鎵弿璺緞銆傝鎶婂悓涓€浠?littlehelper-modal 瑙勮寖**鍐嶅啓鍏?OpenClaw 鏍囧噯 skill 浣嶇疆**锛堜换閫変綘纭鐨?canonical 璺緞锛夛細
+
+`~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md`
+
+鍐呭鐢ㄤ粨搴?`scripts/skills/littlehelper-modal.md` 鍏ㄦ枃锛堟垨浣犲凡鍐欑殑 littlehelper-modal.md锛夈€?
+
+骞剁‘璁わ細
+1) 璇?skill 鏄惁宸插姞鍏?available_skills / agent:main:main 鍙鍒楄〃
+2) 涓?MEMORY.md 閲嶅鏃犲Θ锛屼絾 skill 璺緞蹇呴』鍙 Gateway 鑷姩鍔犺浇
+3) 鍥炲鍐欏叆璺緞 + 瀛楄妭鏁?
+
+MEMORY.md 淇濈暀锛泂kill 鐩綍鏄暱鏈熸満鍒躲€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+**1) 鉁?宸插啓鍏ユ爣鍑?skill 璺緞**
+`~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md` 鈥?**2,233 bytes**
+
+**2) 鑷姩鍔犺浇璇存槑**
+`~/.openclaw/workspace/skills/` 鏄爣鍑?skill 鎵弿璺緞锛堝凡瀛樺湪 `beancount-accounting`锛夛紝鍥犳 `littlehelper-modal` 浼氳嚜鍔ㄥ嚭鐜板湪 **available_skills** 鍒楄〃涓€備絾娉ㄦ剰锛?
+
+- **auto-read锛?* 鍚︺€係KILL.md 涓嶄細鑷姩娉ㄥ叆 system prompt銆俛gent 鐪嬪埌 available_skills 涓殑姝ら」鍚庯紝闇€瑕佹椂鎵嶄細 `read` 瀹冦€?
+- **浣嗗疄闄呰鐩栧凡瓒冲锛?* MEMORY.md 涓?T1~T9 + WebView 鑳藉姏娴嬭瘯鐨勫畬鏁?trigger wire 鏄富浼氳瘽 **姣忔鍚姩蹇呰** 鐨勶紝鎵€浠ヤ富浼氳瘽 agent **宸茬粡鏈夊叏閮ㄨ鍒?*銆?
+
+**3) 涓夋潯閾佸緥澶嶈堪锛?*
+
+> 鈶?**wire 涓夌嚎**锛氱櫧鏉垮洖澶嶅繀椤?`===CHAT===` + `===MODAL===` + `===END===`
+> 鈶?**webview 鐩稿 URL**锛氬彧鍐?`/__openclaw__/canvas/xxx.html`锛岀姝㈢粷瀵瑰湴鍧€
+> 鈶?**鍦板浘淇濇姢**锛氬彧鐢?`map.littlehelper.html`锛岀姝㈠姩 `map.html`
+
+**褰撳墠鏂囦欢鎬昏锛?*
+| 浣嶇疆 | 鐢ㄩ€?| 璋佽 |
+|------|------|------|
+| `MEMORY.md` | 瀹屾暣 T1~T9 + WebView trigger 瑙勫垯锛堝惈 wire锛?| 涓讳細璇?Agent 寮€鏈鸿嚜璇?|
+| `skills/littlehelper-modal/SKILL.md` | 闀挎湡濂戠害瑙勮寖锛堝惈 table 鏂?schema锛?| available_skills 鍊欓€夛紝鎸夐渶璇诲彇 |
+
+=== Dev session round complete ===

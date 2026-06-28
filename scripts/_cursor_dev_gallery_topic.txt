@@ -1,0 +1,137 @@
+话题：多图画廊 gallery — App 最小原生 + WebView 展示为主（请 Gateway 确认模板契约）
+
+## 背景（当前真机状态）
+- 单图回传 + ↓ 原图下载 **已验收**（`__LITTLEHELPER_IMAGE__` / view_stored_img / 页面 img 兜底）。
+- Gateway 已能下发「大胖相册」类多图页（gallery.html 缩略图网格，见真机截图：2 列缩略图 + 标题「大胖相册」+ 白板底栏 10/10）。
+- 多图场景问题：WebView 内 JS lightbox/勾选易被白板 **左右滑切历史** 抢手势；当前 ↓ 只能下 **单张** 或误触白板截图。
+
+## App 端设计原则（请 Gateway 按此对齐，勿另起炉灶）
+1. **白板仍是 WebView 展示区** — 画廊的布局、缩略图、标题、选中打勾样式 **全部留在 gallery.html（Canvas）**，App **不做 Compose 网格替代**。
+2. **App native 尽量小** — 只做三件事：
+   - 读 `window.__LITTLEHELPER_GALLERY__` 元数据；
+   - 拦截约定 **Deep Link** 处理「点选/取消选」；
+   - 白板底部加一个原生按钮 **「下载选中 (N)」**，批量调用已有 HTTP 下载 + MediaStore（复用单图链路）。
+3. **不把交互做成 JS 浮层/popup** — 避免与外层手势冲突；选中态由 HTML 改 CSS class，由 App 回调 JS 驱动。
+
+---
+
+## 推荐契约（请 Gateway 实现 gallery 模板）
+
+### 1) MODAL 示例
+
+```json
+===CHAT===
+大胖相册已打开 🐱
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "gallery-dapang",
+    "type": "webview",
+    "title": "大胖相册",
+    "data": {
+      "url": "/__openclaw__/canvas/gallery.html?key=dapang",
+      "scrollable": true,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+### 2) 页面加载时设置（与单图 `__LITTLEHELPER_IMAGE__` 并列）
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "大胖相册",
+  items: [
+    {
+      fileId: "94b13de8",
+      fileName: "94b13de811b14923...jpg",      // storage 文件名
+      displayName: "大胖",
+      mimeType: "image/jpeg",
+      downloadUrl: "/__openclaw__/file/download/94b13de811b14923...jpg",
+      thumbUrl: "/__openclaw__/file/download/94b13de811b14923...jpg"  // 可与 downloadUrl 相同
+    },
+    {
+      fileId: "a1b2c3d4",
+      fileName: "a1b2c3d4...jpg",
+      displayName: "大胖（沙发大字躺）",
+      mimeType: "image/jpeg",
+      downloadUrl: "/__openclaw__/file/download/a1b2c3d4...jpg",
+      thumbUrl: "/__openclaw__/file/download/a1b2c3d4...jpg"
+    }
+  ]
+};
+```
+
+**约定：**
+- `items` 为数组，顺序即 index（0-based）。
+- 禁止用 `gallery.html?files=a.jpg,b.jpg` 逗号串（文件名/中文/逗号易错）；**只用 JSON 全局变量**。
+- 若仅 1 张图，仍可用 `__LITTLEHELPER_IMAGE__`；**≥2 张用 `__LITTLEHELPER_GALLERY__`**，二者不要同页并存。
+
+### 3) 缩略图点击 → Deep Link（核心，替代 JS overlay）
+
+每个缩略图外包一层链接，**不要用 onclick 弹层**：
+
+```html
+<a href="littlehelper://gallery/toggle?index=0" class="lh-thumb" data-index="0">
+  <img src="..." alt="大胖"/>
+  <span class="lh-check" aria-hidden="true"></span>
+</a>
+```
+
+App 在 `shouldOverrideUrlLoading` 拦截（与现有高德 `androidamap://` 同模式），**不离开 WebView**：
+- `littlehelper://gallery/toggle?index=N` → App 切换选中集，再执行  
+  `window.__LH_gallerySetSelected(N, true|false)` 让 HTML 更新打勾样式。
+- （可选 v2）`littlehelper://gallery/selectAll` / `deselectAll`
+
+**请 gallery.html 实现：**
+
+```javascript
+window.__LH_gallerySetSelected = function(index, selected) {
+  var el = document.querySelector('[data-index="' + index + '"]');
+  if (!el) return;
+  el.classList.toggle('lh-selected', !!selected);
+};
+```
+
+选中样式（打勾、边框）**全部在 CSS**，Gateway 维护；App 不画 UI。
+
+### 4) 布局与手势（请模板遵守，减少与白板冲突）
+
+- 画廊页 **纵向滚动网格**（2 列即可），**不要做横向 carousel** 与白板「左右滑切历史」抢方向。
+- 缩略图 CSS 建议：`touch-action: manipulation;` 减少点击延迟。
+- **禁止**在 gallery.html 做全屏 lightbox / `position:fixed` 大图弹层（真机已证实易闪退/无响应）；要看大图可后续另议 native 预览，v1 不做。
+- 默认 **首进全选 or 全不选** 请 Gateway 定一种（建议 **默认不选**，用户点选后再下载）。
+
+### 5) 下载
+
+- 仍走 `GET downloadUrl` + Bearer（与单图相同），`/ __openclaw__/file/download/{fileName}` 或 `:18889/files/{fileId}` 备选。
+- App 批量：对选中 index 列表逐张下载写入 `Pictures/LittleHelper/`；部分失败 Toast 汇总。
+
+---
+
+## App 侧计划（供 Gateway 知悉，**改动很小**）
+
+| 组件 | 改动 |
+|------|------|
+| `CanvasWebViewBridge` | 读 `__LITTLEHELPER_GALLERY__`，维护 `selectedIndexes` |
+| `GatewayCanvasWebViewClient` | 拦截 `littlehelper://gallery/*` |
+| `ModalHistoryCanvasShell` | 检测到 gallery 时：保留 WebView + 现有截图 FAB；**额外**底部原生条「下载选中 (N)」 |
+| 不改动 | `ModalCanvasHost` 结构、Compose 替代 WebView、白板左右滑逻辑（v1 不动） |
+
+单图 ↓ 按钮：gallery 模式下 **隐藏单图 ↓**，避免与批量下载重复。
+
+---
+
+## 请 Gateway 回复（可执行）
+
+1. 是否同意上述 **`__LITTLEHELPER_GALLERY__` + `littlehelper://gallery/toggle` + `__LH_gallerySetSelected`** 三角契约？
+2. 请给出 **完整 gallery.html 骨架**（含 2 列网格、Deep Link 包裹缩略图、打勾 CSS、设置全局变量示例）。
+3. `gallery.html` 部署路径是否固定 `/__openclaw__/canvas/gallery.html`？动态 items 是否只通过 JS 全局变量注入（推荐）？
+4. 默认选中策略、items 上限（建议 ≤20）、skill/契约文档需新增的 § 标题。
+5. 有无异议：v1 **不做** JS 大图预览，只做「点选 + 批量下载原图」？
+
+请只针对本话题回复；信息不足时列假设并给推荐方案。

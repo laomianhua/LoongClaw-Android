@@ -1,0 +1,9 @@
+用户真机 17:18 测试结果：WebView 显示的是「街区示意图」（绿色方块+北四环中路+你的车），不是 Cursor 要求的 Canvas 内联高德瓦片版 map.html。
+
+请立即：
+1) 恢复 map.html 为 17:02 那版 Canvas 内联高德瓦片（~5KB，零外链，无 Leaflet）
+2) 禁止 user session Agent 再覆写 map.html 或另建街区示意图 HTML
+3) 用户说「打开地图」时，agent:main:main 必须且只能下发 data.url="/__openclaw__/canvas/map.html"，block title 可自定义但 URL 固定
+4) 说明刚才用户看到的 schematic 街区图是哪个 filename？是否 Agent 临时写的？
+
+请确认完成，不要反问 Cursor。

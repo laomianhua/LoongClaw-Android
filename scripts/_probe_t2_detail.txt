@@ -1,0 +1,135 @@
+﻿gateway=192.168.1.55:18789 session=agent:main:main
+-> send: 鐧芥澘娴嬭瘯2
+
+--- session.message final=True ---
+{
+  "sessionKey": "agent:main:main",
+  "agentId": "main",
+  "message": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user is reporting that T2 (table block) works - the title \"T2 娴嬭瘯鎸佷粨\" shows up, but the table content (headers and rows) appear as blank/empty lines below the title. So the table type is not rendering the data properly.\n\nThe issue is likely that the `headers` and `rows` format I'm using doesn't match what the App expects. Let me check the protocol more carefully.\n\nFrom the `designs/multimodal-agent-canvas.md`:\n\n### 5.5 `table` 鈥?鏁版嵁琛ㄦ牸\n\n```json\n{\n  \"id\": \"string\",\n  \"type\": \"table\",\n  \"title\": \"string (鍙€?\",\n  \"data\": {\n    \"headers\": [\n      {\"key\": \"string\", \"label\": \"string\", \"align\": \"left | center | right\"}\n    ],\n    \"rows\": [\n      {\"key1\": \"value\", \"key2\": \"value\", ...}\n    ],\n    \"options\": {\n      \"highlight\": \"red_up_green_down | none\",\n      \"striped\": false,\n      \"compact\": false\n    }\n  }\n}\n```\n\nBut in the T2 test rule I have:\n\n```json\n\"data\": {\n  \"headers\": [\"鍩洪噾鍚嶇О\", \"鎸佹湁閲戦\", \"鎸佷粨鏀剁泭\", \"鏀剁泭鐜嘰"],\n  \"rows\": [\n    [\"娌繁300ETF\", \"580,000\", \"+12,300\", \"+2.12%\"],\n    ...\n  ]\n}\n```\n\nThis doesn't match the schema! The schema says `headers` should be an array of objects `{\"key\": \"...\", \"label\": \"...\", \"align\": \"...\"}` and `rows` should be an array of objects with key-value pairs `{\"key1\": \"value1\", \"key2\": \"value2\"}`.\n\nBut I used a simplified format with arrays of strings/arrays. The App's parser might have been implemented to follow the schema strictly, so it sees arrays instead of objects and renders nothing.\n\nLet me try again with the correct schema format."
+      },
+      {
+        "type": "text",
+        "text": "鎵惧埌闂浜嗏€斺€攖able block 鐨?`headers` 鍜?`rows` 鏍煎紡鍐欓敊浜嗭紝璺?schema 瀵逛笉涓娿€傛寜姝ｇ‘鐨?schema 鏍煎紡锛坄headers` 鏄璞℃暟缁勶紝`rows` 鏄?key-value 瀵硅薄鏁扮粍锛夐噸鍙戜竴娆★細\n\n===CHAT===\nT2 閲嶈瘯锛屾寜 schema 鏍煎紡鍙戙€俓n\n===MODAL===\n{\n  \"action\": \"update\",\n  \"blocks\": [{\n    \"id\": \"t2-table\",\n    \"type\": \"table\",\n    \"title\": \"T2 娴嬭瘯鎸佷粨\",\n    \"data\": {\n      \"headers\": [\n        {\"key\": \"name\", \"label\": \"鍩洪噾鍚嶇О\"},\n        {\"key\": \"amount\", \"label\": \"鎸佹湁閲戦\", \"align\": \"right\"},\n        {\"key\": \"pnl\", \"label\": \"鎸佷粨鏀剁泭\", \"align\": \"right\"},\n        {\"key\": \"rate\", \"label\": \"鏀剁泭鐜嘰", \"align\": \"right\"}\n      ],\n      \"rows\": [\n        {\"name\": \"娌繁300ETF\", \"amount\": \"580,000\", \"pnl\": \"+12,300\", \"rate\": \"+2.12%\"},\n        {\"name\": \"涓瘉500ETF\", \"amount\": \"350,000\", \"pnl\": \"-5,800\", \"rate\": \"-1.66%\"},\n        {\"name\": \"鏍囨櫘500ETF\", \"amount\": \"420,000\", \"pnl\": \"+8,200\", \"rate\": \"+1.95%\"}\n      ],\n      \"options\": {\n        \"highlight\": \"red_up_green_down\"\n      }\n    }\n  }]\n}\n===END==="
+      }
+    ],
+    "api": "openai-completions",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "input": 304,
+      "output": 771,
+      "totalTokens": 49715,
+      "cacheRead": 48640,
+      "cacheWrite": 0,
+      "cost": {
+        "total": 0.0028187999999999998
+      }
+    },
+    "stopReason": "stop",
+    "timestamp": 1782141789969,
+    "responseId": "37196988-6e93-47bd-9dc6-8d795029e3b5",
+    "__openclaw": {
+      "id": "cc147855",
+      "seq": 91
+    }
+  },
+  "messageId": "cc147855",
+  "messageSeq": 91,
+  "session": {
+    "key": "agent:main:main",
+    "kind": "direct",
+    "chatType": "direct",
+    "origin": {
+      "provider": "webchat",
+      "surface": "webchat",
+      "chatType": "direct"
+    },
+    "updatedAt": 1782141788573,
+    "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+    "systemSent": true,
+    "abortedLastRun": false,
+    "thinkingLevels": [
+      {
+        "id": "off",
+        "label": "off"
+      },
+      {
+        "id": "minimal",
+        "label": "minimal"
+      },
+      {
+        "id": "low",
+        "label": "low"
+      },
+      {
+        "id": "medium",
+        "label": "medium"
+      },
+      {
+        "id": "high",
+        "label": "high"
+      }
+    ],
+    "thinkingOptions": [
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
+    "thinkingDefault": "high",
+    "inputTokens": 217,
+    "outputTokens": 242,
+    "totalTokens": 48729,
+    "totalTokensFresh": true,
+    "estimatedCostUsd": 0.00167124,
+    "status": "running",
+    "startedAt": 1782141788106,
+    "modelProvider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "agentRuntime": {
+      "id": "auto",
+      "source": "implicit"
+    },
+    "contextTokens": 1000000,
+    "deliveryContext": {
+      "channel": "webchat"
+    },
+    "lastChannel": "webchat",
+    "hasActiveRun": true
+  },
+  "updatedAt": 1782141788573,
+  "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+  "kind": "direct",
+  "chatType": "direct",
+  "origin": {
+    "provider": "webchat",
+    "surface": "webchat",
+    "chatType": "direct"
+  },
+  "deliveryContext": {
+    "channel": "webchat"
+  },
+  "systemSent": true,
+  "abortedLastRun": false,
+  "inputTokens": 217,
+  "outputTokens": 242,
+  "lastChannel": "webchat",
+  "totalTokens": 48729,
+  "totalTokensFresh": true,
+  "goal": null,
+  "contextTokens": 1000000,
+  "estimatedCostUsd": 0.00167124,
+  "modelProvider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "status": "running",
+  "hasActiveRun": true,
+  "startedAt": 1782141788106
+}
+
+assistant_events=1

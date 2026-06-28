@@ -65,6 +65,8 @@ class TtsManager(context: Context) {
     }
 
     fun stop() {
+        pendingText = null
+        onDoneCallback = null
         tts?.stop()
     }
 

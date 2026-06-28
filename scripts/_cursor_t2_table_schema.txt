@@ -1,0 +1,46 @@
+【T2 表格空白 · 根因与修复】
+
+老夏真机：T1 ✓；T2 只见标题「T2 测试持仓」+ 一条空灰行，无表头/数据。
+
+根因（probe 已确认）：你第一次 T2 的 table data 用了错误格式：
+  headers: ["基金名称", ...]     ← 应是 [{key,label,align},...]
+  rows: [["沪深300ETF",...],...] ← 应是 [{name:"...",amount:"..."},...]
+
+App TableBlockRenderer 严格按 schema 解析，空 headers → 只画出表头灰条无文字。
+
+请两件事：
+1) user-session 规则里写死 T2 正确 MODAL 模板（action:open，非 update）：
+
+===CHAT===
+T2 表格已打开。
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "t2-table",
+    "type": "table",
+    "title": "T2 测试持仓",
+    "data": {
+      "headers": [
+        {"key": "name", "label": "基金名称"},
+        {"key": "amount", "label": "持有金额", "align": "right"},
+        {"key": "pnl", "label": "持仓收益", "align": "right"},
+        {"key": "rate", "label": "收益率", "align": "right"}
+      ],
+      "rows": [
+        {"name": "沪深300ETF", "amount": "580,000", "pnl": "+12,300", "rate": "+2.12%"},
+        {"name": "中证500ETF", "amount": "350,000", "pnl": "-5,800", "rate": "-1.66%"},
+        {"name": "标普500ETF", "amount": "420,000", "pnl": "+8,200", "rate": "+1.95%"}
+      ],
+      "options": {"highlight": "red_up_green_down"}
+    }
+  }]
+}
+===END===
+
+2) 禁止 T2 用 webview/portfolio.html 代替 table block（老夏要测的是原生 table 渲染器）。
+
+Cursor 侧：App 将兼容 headers/rows 字符串数组简写格式，减少再犯。
+
+老夏重装 APK 后再说「白板测试2」验收。

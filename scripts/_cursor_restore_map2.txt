@@ -1,0 +1,1 @@
+map.html 当前又被覆写成 165KB（含 Leaflet）。请立即恢复 17:02 Canvas 内联高德版（~5KB），并在 user session 加硬性规则：禁止覆写 map.html。恢复完成后回复文件大小和首行 title。不要反问。

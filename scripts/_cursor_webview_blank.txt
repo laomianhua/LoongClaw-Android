@@ -1,0 +1,9 @@
+用户真机测试结果：MODAL 标题「华亭嘉园 · CSS定位地图测试」，WebView 区域只显示深蓝/黑色矩形块，看不到地图瓦片、缩放控件或 CSS 测试元素。
+
+请回答：
+1) 这次下发的是哪个 filename？完整 data.url 是什么？
+2) 该 HTML 预期用户应看到什么（截图级描述）？
+3) 若预期是 Leaflet 瓦片地图，当前 map.html 为何是 base64 PNG + 深色背景？是否需要 Gateway 重写 map.html？
+4) Android WebView 对 position:absolute/z-index/transform 是否有已知限制？你们的 CSS 测试页结构是什么？
+
+请给修复方案，不要反问 Cursor。

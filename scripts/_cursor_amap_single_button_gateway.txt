@@ -1,0 +1,90 @@
+【LittleHelper · 高德单按钮 · Gateway Canvas 传参规范】
+
+App 已改为白板底部仅一个按钮：「用高德地图查看」。
+跳转到高德的**具体内容（看 POI / 路线 / 导航）由 Gateway 在 Canvas HTML 里决定**，App 只负责拦截 URI 打开高德 App。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+一、你必须在每张地图 Canvas 里设置
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```javascript
+window.__LITTLEHELPER_MAP__ = { ... };
+```
+
+写在 <script> 中（地图渲染前或后均可）。App 注入按钮时会读取该对象。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+二、三种传参方式（任选其一）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### A. 直接给完整 URI（最灵活，推荐路线页）
+
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  amapUrl: "amapuri://route/plan/?sid=&slat=39.9785&slon=116.3617&sname=%E5%8D%8E%E4%BA%AD%E5%98%89%E5%9B%AD&did=&dlat=39.9087&dlon=116.3975&dname=%E5%A4%A9%E5%AE%89%E9%97%A8&dev=0&t=0"
+};
+```
+
+### B. action + 字段（推荐 Agent 生成）
+
+| 用户意图 | action | 必填字段 | 高德表现 |
+|----------|--------|----------|----------|
+| 看某地在哪 | `view` | lat, lng, name | 地图标 POI |
+| 问路/看路线 | `route` | route.{sLat,sLng,sName,dLat,dLng,dName,t} | 驾车/公交路线规划 |
+| 导航到某地 | `navi` | lat, lng, name | 从 GPS 导航到终点 |
+
+示例 — 华亭嘉园单点：
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  action: "view",
+  lat: 39.9785, lng: 116.3617, name: "华亭嘉园"
+};
+```
+
+示例 — 华亭嘉园 → 天安门（用户问路时应用这个）：
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  action: "route",
+  route: {
+    sLat: 39.9785, sLng: 116.3617, sName: "华亭嘉园",
+    dLat: 39.9087, dLng: 116.3975, dName: "天安门",
+    t: "0"
+  }
+};
+```
+
+`action` 可省略：有 `route` 对象 → 自动按路线；只有 lat/lng → 按查看。
+
+### C. MODAL webview URL 查询参数（备用）
+
+```
+/__openclaw__/canvas/xxx.html?lh_action=route&lh_slat=...&lh_slng=...&lh_sname=...&lh_dlat=...&lh_dlng=...&lh_dname=...&lh_t=0
+```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+三、铁律
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 坐标 **GCJ-02**，URI 里 `dev=0`
+2. `t`：0驾车 1公交 2步行 3骑行
+3. 中文名在 amapUrl 里须 URL 编码；结构化字段用 UTF-8 明文即可（JS 会 encode）
+4. **禁止**主跳转用 `https://uri.amap.com/navigation`（WebView 难唤起 App）
+5. 问路/导航场景默认 `action: "route"`，不要只用终点 viewMap
+6. Canvas 可自己画按钮；若自画，点击时 `location.href = buildUrl()`，逻辑同 `__LITTLEHELPER_MAP__`
+7. 若页面已有 `#lh-amap-bar`，App 不再注入
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+四、请立即更新
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. `map.littlehelper.html` — 附上下方最新版（单按钮 + action:view 华亭嘉园）
+2. 以后所有路线类动态 Canvas — 必须带 `action:"route"` 或 `amapUrl`
+3. 写入 `designs/amap-native-launch.md` 或 skill 镜像
+
+写完后回复：已更新哪些文件 + 华亭嘉园→天安门示例用的 action。
+
+---BEGIN map.littlehelper.html---
+（见 Cursor 仓库 scripts/canvas_map_littlehelper.html，请 read 后写入 ~/.openclaw/canvas/map.littlehelper.html）
+---END---
+
+勿开新话题。

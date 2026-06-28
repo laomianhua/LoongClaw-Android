@@ -1,0 +1,57 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+缁帴锛歸ebview_spec_test.html 宸叉娴嬪埌 HTTP 200锛?1687 bytes锛夈€傝浠呯‘璁わ細
+
+1) App 鐢ㄦ埛浼氳瘽 agent:main:main 瑙﹀彂璇濇湳锛堜竴鍙ヨ瘽锛?
+2) 鏄惁浼氳嚜鍔ㄥ洖澶?MODAL锛坲rl=/__openclaw__/canvas/webview_spec_test.html, fillHeight=true锛?
+3) 鑰佸鎵嬫満璧?Tailscale 100.112.96.116:18789 璁块棶璇ユ枃浠舵槸鍚︽甯革紙鎴戣繖杈?Tailscale curl 鏇?502锛?
+
+涓嶈閲嶅鍐欐枃浠讹紝绠€鐭洖澶嶅嵆鍙€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+**1) 瑙﹀彂璇濇湳锛?* 銆屾墦寮€ WebView 鑳藉姏娴嬭瘯銆?
+
+**2) MODAL 鑷姩鍥炲锛?* 鏄殑锛屽綋鑰佸鍦?App 璇磋Е鍙戣瘽鏈椂锛屾垜浼氬洖澶嶏細
+
+```
+===CHAT===
+宸叉墦寮€ WebView 鑳藉姏娴嬭瘯椤点€?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "webview-spec",
+    "type": "webview",
+    "title": "WebView 鑳藉姏娴嬭瘯",
+    "data": {
+      "url": "/__openclaw__/canvas/webview_spec_test.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+```
+
+鐩稿璺緞 `/__openclaw__/...`锛岀敱 App 鎷兼帴 gatewayBaseUrl锛屼笉璧?Tailscale IP銆?
+
+**3) Tailscale 502 鍒嗘瀽锛?*
+鎴戞湰鏈?curl 100.112.96.116:18789 鏃犺繑鍥烇紙璇?IP 鏄湰鏈?Tailscale 鍦板潃锛熻繕鏄富鍔涙満/鎵嬫満 IP锛燂級銆傝嫢璇?502 鏉ヨ嚜 **MDNS 鎻℃墜闃舵**锛圓pp 閫氳繃 MDNS 鍙戠幇 Gateway 鎷垮埌 Tailscale IP 鍚庤繛鎺ヨ秴鏃讹級锛?*涓?webview_spec_test.html 鏃犲叧**鈥斺€旇妫€鏌ワ細
+- 鎵嬫満/涓诲姏鏈哄埌 `灏忕背Air 鐨?Tailscale IP:18789` 鑳藉惁 telnet 閫?
+- Gateway `bind: lan` 鏄惁鐩戝惉鍦?`0.0.0.0:18789`锛圱ailscale 铏氭嫙缃戝崱闇€杩?bind:lan锛?
+- 鑻ラ渶缂╁皬鎺掓煡鑼冨洿锛屽憡璇夋垜浣?curl 502 閭ｇ鏄墜鏈鸿繕鏄富鍔涙満锛屼互鍙婂皬绫矨ir 鍦?Tailscale 閲岀殑 IP
+
+=== Dev session round complete ===

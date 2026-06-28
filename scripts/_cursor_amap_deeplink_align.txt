@@ -1,0 +1,55 @@
+【LittleHelper App · 白板地图点击跳转高德 App · 方案对齐】
+
+背景：
+- 用户已在真机验收：白板 WebView 可显示位置/路线（如华亭嘉园→天安门，map.littlehelper.html / route 类 Canvas）。
+- 新需求：用户在白板地图上点击（标记点、路线、或「在高德中打开」按钮）时，携带位置/路线信息跳转到手机已安装的**高德地图 App**。
+
+请回复你们已拟定的完整方案（若已有文档请粘贴），并确认以下技术点：
+
+---
+
+## A. 交互与协议（请二选一或说明组合）
+
+1) **自定义 URL Scheme（推荐由 App 拦截）**
+   - Canvas JS：`location.href = "littlehelper://map/open?..."` 或 `<a href="littlehelper://...">`
+   - App WebView `shouldOverrideUrlLoading` 解析参数 → `Intent` 打开 `com.autonavi.minimap`
+
+2) **直接高德 URI**
+   - `androidamap://viewMap?...` / `androidamap://route?...` / `androidamap://navi?...`
+   - 或 `amapuri://...`
+
+3) **JS Bridge**
+   - `window.LittleHelper.openAmap({ action, ... })`（需 App 注入 `@JavascriptInterface`）
+
+请给出你们**选定**的方案、完整 URL/JSON 字段表、以及 map.littlehelper.html / route.html 里如何触发（点击 marker？整条路线？底部按钮？）。
+
+---
+
+## B. 必须覆盖的场景
+
+| action | 参数 | 用户预期 |
+|--------|------|----------|
+| `view` | name, lat, lon | 查看 POI |
+| `route` | sName,sLat,sLon, dName,dLat,dLon, mode? | 路线规划页 |
+| `navi` | 同上 + 可选 autoStart | 直接导航（若支持） |
+
+坐标系请明确：**GCJ-02**（高德）还是 WGS-84？（androidamap 通常 `dev=0` 为 GCJ-02）
+
+---
+
+## C. App 侧我会实现（请确认无冲突）
+
+- `GatewayCanvasWebViewClient.shouldOverrideUrlLoading` 拦截 `littlehelper://`（或你们定的 scheme）
+- `AndroidManifest` `<queries>` 声明高德包名 `com.autonavi.minimap`
+- 未安装高德时 Toast「未安装高德地图」或 fallback 网页
+
+---
+
+## D. 请一并回复
+
+1) 你们方案全文（若之前只口头说过，请在此贴出）
+2) Canvas 改动计划：改哪些 html、示例触发代码
+3) 与现有 ± 缩放按钮的触摸冲突如何避免（click vs pan）
+4) 是否写入 `littlehelper-modal` skill / OPENCLAW_GATEWAY_CONTRACT § 新章节
+
+勿开新话题；信息不足请列假设并给推荐默认。

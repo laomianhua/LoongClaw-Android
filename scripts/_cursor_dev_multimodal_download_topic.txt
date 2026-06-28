@@ -1,0 +1,195 @@
+话题：【真机已验收】多模态文件下载统一协议 — 图片 / PDF / 未来游记
+
+## 状态
+
+**2026-06-25 真机全链路通过**（App + Gateway 联调确认）：
+
+1. 任意白板页面 → Gateway **Playwright 生成 PDF** → 写入 storage → **:18889** 提供下载
+2. 用户 **长按**（画廊）或点 **↓**（单文件）→ App 下载到 **`Download/LittleHelper/`**
+3. **画廊图片 + PDF + 未来游记** 共用同一套 `__LITTLEHELPER_GALLERY__` / `__LITTLEHELPER_IMAGE__` 协议，**无需 App 协议变更**
+
+请 Gateway 将本文写入 skill / MEMORY，与 `generate_gallery.py`、Canvas 模板对齐。
+
+---
+
+## 端到端数据流
+
+```
+Agent MODAL open webview
+        ↓
+Gateway Canvas HTML（gallery_cache_*.html 或单页）
+        ├── Playwright / 脚本生成 PDF、图片入 ~/.openclaw/uploads 或 storage
+        ├── thumbUrl  → :18789 Canvas 同源（图片预览，PDF 可省略或用占位图）
+        └── downloadUrl → http://{host}:18889/file/download/{storageFileName}
+        ↓
+页面注入 window.__LITTLEHELPER_GALLERY__ 或 __LITTLEHELPER_IMAGE__
+        ↓
+用户长按 ~500ms → littlehelper://gallery/download?index=N
+   或单页右下角 ↓（App 原生 FAB，非 Canvas 自绘）
+        ↓
+App StoredFileDownloader GET + Bearer 鉴权
+        ↓
+校验 magic-byte（JPEG/PNG/PDF 等，拒绝 HTML/JSON 假成功）
+        ↓
+保存 Download/LittleHelper/{displayName}_{MMdd}.{ext}
+        ↓
+用户：聊天标题栏 📁「我的文件」或系统文件管理器 → 打开 / 删除
+```
+
+---
+
+## Gateway 契约（权威）
+
+### 1) 下载 URL 分轨（已验收，禁止混用）
+
+| 用途 | 端口 | 示例 |
+|------|------|------|
+| **thumbUrl**（WebView 内展示） | **18789** Canvas 同源 | `/__openclaw__/canvas/{cacheFile}` 或 storage 缩略图 |
+| **downloadUrl**（App 原生下载） | **18889** HTTP | `http://{host}:18889/file/download/{storageFileName}` |
+
+- **禁止** 把 `downloadUrl` 写成 18789 Canvas 路径（App 会 rewrite，但 Gateway 应直接给 18889）
+- 模板里可用 `http://__HOST__:18889/...`，App 会将 `__HOST__` 替换为 `OPENCLAW_GATEWAY_HOST`
+
+### 2) 元数据：`window.__LITTLEHELPER_GALLERY__`（多文件：图片 + PDF 混排）
+
+**不要**与 `__LITTLEHELPER_IMAGE__` 同页并存。画廊优先。
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "东京游记",
+  items: [
+    {
+      fileId: "94b13de8",
+      fileName: "94b13de811b14923_photo.jpg",   // storage 文件名（18889 路径用此名）
+      displayName: "大胖",                        // App 保存文件名的人类可读部分
+      mimeType: "image/jpeg",
+      downloadUrl: "http://192.168.1.55:18889/file/download/94b13de811b14923_photo.jpg",
+      thumbUrl: "/__openclaw__/canvas/gallery_cache_1719300000000_thumb0.jpg"
+    },
+    {
+      fileId: "b2c3d4e5",
+      fileName: "b2c3d4e5_tokyo.pdf",
+      displayName: "东京游记",
+      mimeType: "application/pdf",
+      downloadUrl: "http://192.168.1.55:18889/file/download/b2c3d4e5_tokyo.pdf",
+      thumbUrl: ""   // PDF 可无缩略图；页面可用占位图 + caption
+    }
+  ]
+};
+```
+
+**页面交互（Gateway HTML 负责）：**
+
+- 布局：**纵向单列**，一张接一张（图片 + PDF 卡片均可）
+- **长按 ~500ms** 某一项 → `location.href = 'littlehelper://gallery/download?index=' + index`
+- **禁止** v1 多选、打勾、批量底栏、`__LH_gallerySetSelected`、Canvas 内自绘「下载」大按钮
+
+### 3) 元数据：`window.__LITTLEHELPER_IMAGE__`（单文件）
+
+单 PDF、单图片场景（非画廊列表）：
+
+```javascript
+window.__LITTLEHELPER_IMAGE__ = {
+  fileId: "c3d4e5f6",
+  fileName: "c3d4e5f6_report.pdf",
+  displayName: "持仓估值",
+  mimeType: "application/pdf",
+  downloadUrl: "http://192.168.1.55:18889/file/download/c3d4e5f6_report.pdf"
+};
+```
+
+App 读元数据后显示白板右下角 **↓**；用户确认后下载。**禁止** Canvas 内自绘下载按钮。
+
+### 4) PDF 生成（Gateway 侧，已验收）
+
+- 任意白板 HTML → **Playwright** `page.pdf()`（或等价）→ 写入 storage
+- `fileName` = `{fileId}_{slug}.pdf`（与 upload 命名一致即可）
+- `displayName` = 用户可见标题（如「东京游记」「持仓估值」）
+- MODAL 仍用标准 wire + webview block 加载 gallery 或单页 HTML
+
+### 5) App 保存规则（Gateway 只需提供 displayName）
+
+| 项 | 规则 |
+|----|------|
+| 目录 | `Download/LittleHelper/`（公共下载目录） |
+| 文件名 | `{displayName}_{MMdd}.{ext}`，如 `大胖_0627.jpg`、`东京游记_0627.pdf` |
+| 重名 | App 自动 `_2`、`_3`… |
+| UUID | **不要**用 fileId 作为用户可见文件名 |
+
+### 6) 支持的 mimeType（App 当前校验）
+
+| mimeType | 校验 |
+|----------|------|
+| `image/jpeg` / `png` / `webp` / `gif` | magic-byte |
+| `application/pdf` | `%PDF-` 头 |
+| 其他 | 拒绝 HTML/JSON；后续扩展 Word/Excel 时 App 侧加校验即可 |
+
+---
+
+## App 侧行为（已实现，勿改协议）
+
+| 模块 | 职责 |
+|------|------|
+| `CanvasWebViewBridge` | 读 `__LITTLEHELPER_GALLERY__` / `__LITTLEHELPER_IMAGE__` |
+| `GalleryDeepLink` | 仅处理 `littlehelper://gallery/download?index=N` |
+| `StoredFileDownloader` | GET 18889 + 鉴权 + 回退 `/files/{fileId}` |
+| `LittleHelperFileSaver` | 写入 `Download/LittleHelper/` |
+| `MyFilesSheet` | 标题栏 📁 列表 / 打开 / 删除 |
+
+Toast 文案：**「已保存到 Download/LittleHelper」**（非相册）。
+
+---
+
+## MODAL 示例（PDF 画廊）
+
+```
+===CHAT===
+东京游记 PDF 已生成，长按可下载。
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "gallery-tokyo",
+    "type": "webview",
+    "title": "东京游记",
+    "data": {
+      "url": "/__openclaw__/canvas/gallery_cache_1719300000000.html?_t=1719300000000",
+      "scrollable": true,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+---
+
+## 已废弃（勿再使用）
+
+- 保存到 `Pictures/LittleHelper/` 或 `DCIM/Camera/`
+- 画廊 v1：多选、批量下载底栏、`__LH_gallerySetSelected`
+- `downloadUrl` 指向 18789 Canvas（仅 thumb 可用 18789）
+- Canvas 内自绘「保存」「下载」按钮（单图用 App ↓ FAB）
+
+---
+
+## 验收清单
+
+- [ ] Playwright 生成 PDF → 18889 `curl` 返回 `%PDF-` 头
+- [ ] 画廊 items 含 PDF + 图片混排，`displayName` / `mimeType` / `downloadUrl` 齐全
+- [ ] 长按 PDF 项 → App Toast 成功 → `Download/LittleHelper/东京游记_MMDD.pdf` 可打开
+- [ ] 长按图片项 → 同名规则 `.jpg`
+- [ ] App 📁「我的文件」可见、可删、可用系统 PDF 阅读器打开
+- [ ] 单页 `__LITTLEHELPER_IMAGE__` + ↓ 下载 PDF 仍可用
+
+---
+
+## 请 Gateway 回复
+
+1. 已更新哪些文件（skill / MEMORY / generate_gallery.py / 模板）
+2. PDF Playwright 流水线入口脚本名
+3. 游记类内容是否统一走 gallery_cache HTML + `__LITTLEHELPER_GALLERY__`
+4. 有无与本文冲突的旧约定需删除
+
+协调命令：`python scripts/run_dev_session_lan.py scripts/_cursor_dev_multimodal_download_topic.txt`

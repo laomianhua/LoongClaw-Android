@@ -1,0 +1,277 @@
+﻿=== 鐧芥澘娴嬭瘯1 ===
+gateway=192.168.1.55:18789 session=agent:main:main
+-> send: 鐧芥澘娴嬭瘯1
+
+--- session.message final=True ---
+{
+  "sessionKey": "agent:main:main",
+  "agentId": "main",
+  "message": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user sent \"鐧芥澘娴嬭瘯1\" from the openclaw-android app. They're just doing quick tests. Let me send a straightforward reply."
+      },
+      {
+        "type": "text",
+        "text": "鏀跺埌 鉁?
+      }
+    ],
+    "api": "openai-completions",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "input": 98,
+      "output": 35,
+      "totalTokens": 41477,
+      "cacheRead": 41344,
+      "cacheWrite": 0,
+      "cost": {
+        "total": 0.00099488
+      }
+    },
+    "stopReason": "stop",
+    "timestamp": 1782141371977,
+    "responseId": "55039153-85bf-4346-a70e-2eff15ddf2f5",
+    "__openclaw": {
+      "id": "238d51e5",
+      "seq": 71
+    }
+  },
+  "messageId": "238d51e5",
+  "messageSeq": 71,
+  "session": {
+    "key": "agent:main:main",
+    "kind": "direct",
+    "chatType": "direct",
+    "origin": {
+      "provider": "webchat",
+      "surface": "webchat",
+      "chatType": "direct"
+    },
+    "updatedAt": 1782141370530,
+    "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+    "systemSent": true,
+    "abortedLastRun": false,
+    "thinkingLevels": [
+      {
+        "id": "off",
+        "label": "off"
+      },
+      {
+        "id": "minimal",
+        "label": "minimal"
+      },
+      {
+        "id": "low",
+        "label": "low"
+      },
+      {
+        "id": "medium",
+        "label": "medium"
+      },
+      {
+        "id": "high",
+        "label": "high"
+      }
+    ],
+    "thinkingOptions": [
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
+    "thinkingDefault": "high",
+    "inputTokens": 198,
+    "outputTokens": 29,
+    "totalTokens": 41414,
+    "totalTokensFresh": true,
+    "estimatedCostUsd": 0.00108032,
+    "status": "running",
+    "startedAt": 1782141370029,
+    "modelProvider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "agentRuntime": {
+      "id": "auto",
+      "source": "implicit"
+    },
+    "contextTokens": 1000000,
+    "deliveryContext": {
+      "channel": "webchat"
+    },
+    "lastChannel": "webchat",
+    "hasActiveRun": true
+  },
+  "updatedAt": 1782141370530,
+  "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+  "kind": "direct",
+  "chatType": "direct",
+  "origin": {
+    "provider": "webchat",
+    "surface": "webchat",
+    "chatType": "direct"
+  },
+  "deliveryContext": {
+    "channel": "webchat"
+  },
+  "systemSent": true,
+  "abortedLastRun": false,
+  "inputTokens": 198,
+  "outputTokens": 29,
+  "lastChannel": "webchat",
+  "totalTokens": 41414,
+  "totalTokensFresh": true,
+  "goal": null,
+  "contextTokens": 1000000,
+  "estimatedCostUsd": 0.00108032,
+  "modelProvider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "status": "running",
+  "hasActiveRun": true,
+  "startedAt": 1782141370029
+}
+
+assistant_events=1
+=== 鐧芥澘娴嬭瘯2 ===
+gateway=192.168.1.55:18789 session=agent:main:main
+-> send: 鐧芥澘娴嬭瘯2
+
+--- session.message final=True ---
+{
+  "sessionKey": "agent:main:main",
+  "agentId": "main",
+  "message": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user sent \"鐧芥澘娴嬭瘯2\" from the Android app. Let me test the whiteboard update flow - update the existing webview to show our fund portfolio data."
+      },
+      {
+        "type": "toolCall",
+        "id": "call_00_nF95YTpTjk6qOr6tz3Dk4693",
+        "name": "exec",
+        "arguments": {
+          "command": "type C:\\Users\\ggxia\\.openclaw\\canvas\\portfolio.html 2>nul"
+        },
+        "partialArgs": "{\"command\": \"type C:\\\\Users\\\\ggxia\\\\.openclaw\\\\canvas\\\\portfolio.html 2>nul\"}"
+      }
+    ],
+    "api": "openai-completions",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "input": 126,
+      "output": 98,
+      "totalTokens": 41568,
+      "cacheRead": 41344,
+      "cacheWrite": 0,
+      "cost": {
+        "total": 0.0011488800000000001
+      }
+    },
+    "stopReason": "toolUse",
+    "timestamp": 1782141379358,
+    "responseId": "d23daa04-6335-48ed-9171-d396b9e0cb6c",
+    "__openclaw": {
+      "id": "382b0cd3",
+      "seq": 73
+    }
+  },
+  "messageId": "382b0cd3",
+  "messageSeq": 73,
+  "session": {
+    "key": "agent:main:main",
+    "kind": "direct",
+    "chatType": "direct",
+    "origin": {
+      "provider": "webchat",
+      "surface": "webchat",
+      "chatType": "direct"
+    },
+    "updatedAt": 1782141377996,
+    "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+    "systemSent": true,
+    "abortedLastRun": false,
+    "thinkingLevels": [
+      {
+        "id": "off",
+        "label": "off"
+      },
+      {
+        "id": "minimal",
+        "label": "minimal"
+      },
+      {
+        "id": "low",
+        "label": "low"
+      },
+      {
+        "id": "medium",
+        "label": "medium"
+      },
+      {
+        "id": "high",
+        "label": "high"
+      }
+    ],
+    "thinkingOptions": [
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
+    "thinkingDefault": "high",
+    "inputTokens": 98,
+    "outputTokens": 35,
+    "totalTokens": 41442,
+    "totalTokensFresh": true,
+    "estimatedCostUsd": 0.00099488,
+    "status": "running",
+    "startedAt": 1782141377540,
+    "modelProvider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "agentRuntime": {
+      "id": "auto",
+      "source": "implicit"
+    },
+    "contextTokens": 1000000,
+    "deliveryContext": {
+      "channel": "webchat"
+    },
+    "lastChannel": "webchat",
+    "hasActiveRun": true
+  },
+  "updatedAt": 1782141377996,
+  "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+  "kind": "direct",
+  "chatType": "direct",
+  "origin": {
+    "provider": "webchat",
+    "surface": "webchat",
+    "chatType": "direct"
+  },
+  "deliveryContext": {
+    "channel": "webchat"
+  },
+  "systemSent": true,
+  "abortedLastRun": false,
+  "inputTokens": 98,
+  "outputTokens": 35,
+  "lastChannel": "webchat",
+  "totalTokens": 41442,
+  "totalTokensFresh": true,
+  "goal": null,
+  "contextTokens": 1000000,
+  "estimatedCostUsd": 0.00099488,
+  "modelProvider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "status": "running",
+  "hasActiveRun": true,
+  "startedAt": 1782141377540
+}
+
+assistant_events=1

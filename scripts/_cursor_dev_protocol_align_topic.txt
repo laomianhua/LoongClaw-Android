@@ -1,0 +1,213 @@
+话题：【权威对齐】LittleHelper App 白板/MODAL/Canvas 协议 — 请 Gateway 严格按 App 侧执行
+
+## 背景
+
+Gateway 侧 memory 故障后，白板控制出现不确定。以下内容由 **LittleHelper App 源码 + 真机已验收行为** 整理，为当前唯一权威契约。请：
+
+1. **严格按本文对齐** skill / MEMORY / `generate_gallery.py` / Canvas 模板；
+2. **废弃** 本文「已废弃」章节所列 v1 约定；
+3. 回复确认：已理解、将更新哪些文件、有无冲突疑问。
+
+App 用户会话：**agent:main:main**（非 cursor-dev）。本协调会话仅用于对齐，手机联调用 main。
+
+---
+
+## 1. 助手回复 Wire 格式（打开白板必遵）
+
+```
+===CHAT===
+一两句摘要（不要贴 JSON / Markdown 表格 / HTML）
+
+===MODAL===
+{"action":"open|update|close","blocks":[...]}
+===END===
+```
+
+| 段 | App 行为 |
+|----|----------|
+| `===CHAT===` | 聊天气泡正文 |
+| `===MODAL===` | JSON → 白板渲染 |
+| `===END===` | 流式结束；缺省但 JSON 完整也可解析 |
+
+**禁止**只回复「好的/已打开」而不带 `===MODAL===`。
+
+**App 也接受**：裸 `{"action","blocks"}`；或 `payload.modal` / `content[].type` 为 `modal|canvas|agent_canvas|whiteboard|ui` 与 chat 分轨（App 自动合并）。
+
+**MODAL action**：
+
+| action | App |
+|--------|-----|
+| `open` | 替换 blocks，展开白板面板 |
+| `update` | 按 block `id` 合并 |
+| `close` | 关闭白板 |
+| `noop` | 忽略 |
+
+---
+
+## 2. MODAL Block Schema
+
+```json
+{ "id": "唯一", "type": "webview|table|markdown|chart/line", "title": "可选", "data": {} }
+```
+
+### webview
+
+```json
+{
+  "id": "x",
+  "type": "webview",
+  "title": "标题",
+  "data": {
+    "url": "/__openclaw__/canvas/xxx.html",
+    "scrollable": true,
+    "fillHeight": true
+  }
+}
+```
+
+| 规则 | 说明 |
+|------|------|
+| `url` | **推荐相对路径** `/__openclaw__/canvas/<file>`；绝对 URL 中 `/__openclaw__/canvas/` 路径会改写到 App 当前 Gateway 基址 |
+| 动态文件名 | 允许 `gallery_cache_{timestamp}.html` 等；MODAL 下发完整 url 即可 |
+| `fillHeight` | 单 webview 块时 `true` 撑满白板 |
+| 地图 canonical | `/__openclaw__/canvas/map.littlehelper.html`；勿覆写 `map.html` |
+
+### table
+
+```json
+{
+  "headers": [{ "key": "name", "label": "名称", "align": "left" }],
+  "rows": [{ "name": "值" }],
+  "options": { "highlight": "red_up_green_down", "striped": false }
+}
+```
+
+### markdown / chart/line
+
+- markdown: `{ "content": "..." }`
+- chart/line: `{ "series": [{ "points": [{ "y": 1.0 }] }] }`
+
+---
+
+## 3. Canvas HTTP
+
+| 项 | 值 |
+|----|-----|
+| 磁盘 | `~/.openclaw/canvas/` |
+| HTTP | `/__openclaw__/canvas/<file>`（**双下划线**，非 `/openclaw/`） |
+| 鉴权 | `Authorization: Bearer <token>`（App WebView 自动注入） |
+
+---
+
+## 4. Canvas 页面 JS 全局变量（Gateway 必须按场景设置）
+
+### 4.1 单图 `window.__LITTLEHELPER_IMAGE__`（已验收）
+
+与 gallery **不要同页并存**。
+
+```javascript
+window.__LITTLEHELPER_IMAGE__ = {
+  fileId: "94b13de8",
+  fileName: "会员卡.jpg",
+  mimeType: "image/jpeg",
+  downloadUrl: "/__openclaw__/file/download/xxx.jpg"
+  // 或 http://{host}:18889/file/download/xxx.jpg
+};
+```
+
+App：右下角 **↓ 原图** → GET → 相册 `Pictures/LittleHelper/`。
+
+兜底 MODAL url：`view_stored_img.html?f={storageFileName}&name={displayName}`
+
+### 4.2 画廊 v2 `window.__LITTLEHELPER_GALLERY__`（已验收，当前生产）
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "相册名",
+  items: [{
+    fileId, fileName, displayName, mimeType,
+    downloadUrl: "http://{host}:18889/file/download/...",
+    thumbUrl: "http://{host}:18889/file/download/..."
+  }]
+};
+```
+
+| 规则 | 说明 |
+|------|------|
+| 布局 | **纵向单列**，一张接一张；禁止 2 列网格、JS lightbox |
+| 生成 | `generate_gallery.py` → `gallery_cache_{ts}.html` |
+| 交互 | 长按 ~500ms → `littlehelper://gallery/download?index=N` |
+| touchmove >12px | 取消长按 |
+| App | 拦截 Deep Link，取 `items[N]` 下载；**无**「下载选中」底栏 |
+| 画廊模式 | 隐藏单图 ↓，保留截图 FAB |
+
+### 4.3 地图 `window.__LITTLEHELPER_MAP__`
+
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  amapUrl: "amapuri://route/plan/?..."
+};
+// 或 { action: "view|route|navi", lat, lng, name, route: {...} }
+```
+
+App 注入 `__LH_openAmap()` / `__LH_hasAmap()`；标题栏显示「用高德地图查看」。
+
+**Gateway 禁止**：Canvas 内任何「高德导航」「网页版」「用高德地图查看」按钮。
+
+---
+
+## 5. Deep Link（App 拦截，不离开 WebView）
+
+| URL | 用途 |
+|-----|------|
+| `littlehelper://gallery/download?index=N` | 画廊长按下载第 N 张 |
+| `androidamap://...` / `amapuri://...` | 唤起高德或 H5 降级 |
+
+---
+
+## 6. 文件下载 URL
+
+| 路径 | 端口 | 鉴权 |
+|------|------|------|
+| `/__openclaw__/file/download/{fileName}` | 18789 | Bearer |
+| `http://{host}:18889/file/download/{fileName}` | **18889** | 无（upload 服务，画廊 v2 当前生产） |
+| `/files/{fileId}` | 18889 | 无（备选） |
+
+---
+
+## 7. 用户上传（App → Gateway）
+
+| 项 | 格式 |
+|----|------|
+| HTTP | `POST http://{host}:18889/upload` |
+| 消息 | 末尾 `[upload:{fileId}:{fileName}]`（气泡不显示） |
+
+---
+
+## 8. App 白板 UI（Gateway 无需下发，供知悉）
+
+- 历史最多 **10** 页；左滑较新 / 右滑较旧
+- 底栏提示：**「左右滑动切换 · 长按删除」**（长按删除仅作用于该文案，与画廊长按图片无关）
+- 截图 FAB：可见区域保存到相册
+
+---
+
+## 9. 已废弃（v2 起禁止再生成）
+
+| 元素 | 状态 |
+|------|------|
+| `littlehelper://gallery/toggle` | 废弃 |
+| `__LH_gallerySetSelected` / `__LH_galleryGetSelected` | 废弃 |
+| HTML 底部「下载选中」栏 | 废弃 |
+| 2 列缩略图网格 + JS lightbox | 废弃 |
+
+---
+
+## 10. 请 Gateway 回复
+
+1. 是否确认以 **本文** 为权威契约（覆盖旧版 `OPENCLAW_GATEWAY_CONTRACT.md` 2026-06-22 中缺失/过时部分）？
+2. 将更新哪些文件（skill、MEMORY、`generate_gallery.py`、Canvas 模板清单）？
+3. 有无与本文冲突的现有行为需要 App 改？（若无，请答「无，向 App 对齐」）
+4. 能否给出一条 **测试 MODAL**（gallery v2 纵向 + 单图各一例）供真机复验？
+
+请只针对本话题回复。

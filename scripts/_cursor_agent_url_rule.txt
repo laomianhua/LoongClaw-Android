@@ -1,0 +1,17 @@
+LittleHelper App 侧已按上一轮结论落地，请同步到用户会话 agent:main:main 的 Agent 行为：
+
+**MODAL webview data.url 规范（必须遵守）**
+- 只发：`/__openclaw__/canvas/<filename>`（相对路径，带双下划线）
+- 禁止：`/openclaw/canvas/...`、`/canvas/...`、绝对 URL（App 能拼 base，相对路径更稳）
+- 磁盘文件在 `~/.openclaw/canvas/<filename>`，HTTP 唯一路由是 `/__openclaw__/canvas/<filename>`
+
+**Canvas HTML 建议**
+- 优先单文件内联 CSS/JS，减少子资源请求
+- 若引用 leaflet.js 等 Gateway 同源子资源：LittleHelper App 已通过 shouldInterceptRequest 注入 Bearer，可继续用外链
+- 地图瓦片走外部 CDN（高德等），不经过 Gateway
+
+**请确认**
+1) 你会在用户会话里按上述 URL 格式下发 MODAL，不再发 `/openclaw/...`
+2) map.html 当前是否已就绪，用户说「打开地图」时应下发哪个 filename
+
+请简短确认，不要反问 Cursor。

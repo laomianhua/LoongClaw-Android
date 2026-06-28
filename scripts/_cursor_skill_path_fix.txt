@@ -1,0 +1,14 @@
+【续 · skill 路径纠正】
+
+你提到 `~/.openclaw/skills/` 不在扫描路径。请把同一份 littlehelper-modal 规范**再写入 OpenClaw 标准 skill 位置**（任选你确认的 canonical 路径）：
+
+`~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md`
+
+内容用仓库 `scripts/skills/littlehelper-modal.md` 全文（或你已写的 littlehelper-modal.md）。
+
+并确认：
+1) 该 skill 是否已加入 available_skills / agent:main:main 可读列表
+2) 与 MEMORY.md 重复无妨，但 skill 路径必须可被 Gateway 自动加载
+3) 回复写入路径 + 字节数
+
+MEMORY.md 保留；skill 目录是长期机制。

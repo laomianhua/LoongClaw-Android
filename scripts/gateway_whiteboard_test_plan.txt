@@ -1,0 +1,95 @@
+【LittleHelper 白板联调 · Phase 2 · Gateway 自主生成内容测试计划】
+
+背景：webview_spec_test.html 已在老夏真机通过（瓦片满屏、MODAL 自动弹白板）。App 临时本地测试代码已删除。现进入 Phase 2：由 Gateway Agent 自主生成/发布 Canvas 内容，验证各类 MODAL block。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+一、全局规则（user-session agent:main:main，每次必守）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 回复格式必须是 wire 三线：
+   ===CHAT===
+   （一两句摘要，不要贴 JSON/表格/Markdown 正文）
+
+   ===MODAL===
+   { "action": "open|update|close", "blocks": [...] }
+
+   ===END===
+
+2. webview 的 data.url 必须用相对路径：
+   "/__openclaw__/canvas/<file>.html"
+   禁止写 http://100.x 或 192.168.x（App 会拼 gatewayBaseUrl）
+
+3. 单页 webview 必须：
+   "scrollable": false, "fillHeight": true
+
+4. 地图只用受保护副本（App 会重定向 map.html）：
+   "/__openclaw__/canvas/map.littlehelper.html"
+   禁止覆写 map.html
+
+5. 发布 HTML 前先写入 ~/.openclaw/canvas/，curl 200 后再 MODAL
+
+6. App 支持的 block.type：
+   webview | table | markdown | chart/line
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+二、测试用例（请逐条准备，老夏在 App 里说触发语）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【T1 静态 WebView】
+触发语：「白板测试1」或「打开静态网页测试」
+你的动作：
+- 生成并发布 canvas/t1_static.html（大标题 + 彩色按钮 + 当前时间 JS）
+- MODAL 单 block webview，fillHeight true
+验收：白底标题可见、按钮可点、时间会变
+
+【T2 表格 block】
+触发语：「白板测试2」或「打开持仓表格测试」
+你的动作：MODAL 含 type:table（参考 headers/rows 结构，3 行假数据即可）
+验收：表格在白板内，聊天气泡只有摘要无 | 管道符
+
+【T3 Markdown block】
+触发语：「白板测试3」
+你的动作：MODAL 含 type:markdown，data.content 含 **粗体**、列表、代码块
+验收：Markdown 渲染正常
+
+【T4 折线图占位】
+触发语：「白板测试4」
+你的动作：MODAL 含 type:chart/line，series 至少 1 条 5 个点
+验收：折线图占位 UI 显示（不必真 ECharts）
+
+【T5 组合白板】
+触发语：「白板测试5」
+你的动作：MODAL 含 table + chart/line 两个 block（同持仓 Demo）
+验收：白板内上下两块都可见
+
+【T6 动态 WebView（Agent 现场写 HTML）】
+触发语：「白板测试6」
+你的动作：现场写 canvas/t6_dynamic.html（含 flex 布局 + canvas 画圆 + 计数器按钮），发布后发 MODAL
+验收：与 T1 不同，证明你能动态生成而非只读固定文件
+
+【T7 真地图】
+触发语：「打开华亭嘉园地图」
+你的动作：MODAL webview url=map.littlehelper.html，fillHeight true
+验收：高德瓦片地图（非街区示意图）
+
+【T8 更新白板】
+前置：T5 已打开
+触发语：「白板测试8」或「加条均线」
+你的动作：action:update，只更新 chart block（加第二条 series 虚线）
+验收：表格仍在，图表多一条线
+
+【T9 关闭白板】
+触发语：「关闭白板」
+你的动作：action:close，blocks 可空
+验收：白板收起，聊天仍可见
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+三、请你（dev 会话）现在回复
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 确认已理解上述 9 项测试计划
+2. 说明 T1 的 t1_static.html 是否已写好（或计划何时写好）
+3. 给老夏一句话：「从 T1 开始，在 App 说：白板测试1」
+4. 若需要 Cursor 协助生成某个 HTML 模板，列出文件名
+
+勿主动开新话题。老夏会按 T1→T9 在真机逐项验收并反馈。

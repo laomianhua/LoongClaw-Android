@@ -1,35 +1,51 @@
 package com.littlehelper.ui.components
 
 import android.widget.Toast
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.littlehelper.AppPhase
-import com.littlehelper.R
+import com.littlehelper.shell.model.ShellMode
+import com.littlehelper.shell.projection.ShellUiProjector
+import com.littlehelper.ui.theme.AppColors
 import com.littlehelper.viewmodel.MainUiState
+import kotlinx.coroutines.CancellationException
+
+private val MicButtonSize = 64.dp
+private val MicRippleContainerSize = 120.dp
+private val WaveSlotWidth = 76.dp
 
 @Composable
 fun VoiceHoldButton(
@@ -39,112 +55,203 @@ fun VoiceHoldButton(
     onHoldCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val phase = uiState.phase
-    val isBusy = phase == AppPhase.PROCESSING || phase == AppPhase.SENDING
-    val enabled = !isBusy
-    val context = LocalContext.current
-
-    val buttonText = when (phase) {
-        AppPhase.PROCESSING -> stringResource(R.string.voice_button_processing)
-        AppPhase.SENDING -> stringResource(R.string.voice_button_sending)
-        AppPhase.RECORDING -> "松开 发送"
-        else -> when {
-            uiState.retryListening -> stringResource(R.string.voice_button_retry)
-            uiState.choosingRecord -> stringResource(R.string.voice_button_choose)
-            uiState.saveConfirmListening -> stringResource(R.string.voice_button_confirm)
-            uiState.followUpListening -> stringResource(R.string.voice_button_follow_up)
-            phase == AppPhase.ANSWERING -> stringResource(R.string.voice_button_interrupt)
-            else -> "按住 说话"
-        }
+    val phase = ShellUiProjector.phase(uiState)
+    val isRecording = phase == AppPhase.RECORDING
+    // 录音中必须保持手势监听，否则 enabled=false 会取消 pointerInput，松手永远收不到 onHoldEnd。
+    val blocksNewHold = when (uiState.shellMode) {
+        ShellMode.OPENCLAW -> phase == AppPhase.SENDING
+        else -> phase == AppPhase.PROCESSING || phase == AppPhase.SENDING
     }
+    val micTint = if (blocksNewHold && !isRecording) AppColors.micDisabled else AppColors.micGreen
+    val context = LocalContext.current
+    val latestUiState by rememberUpdatedState(uiState)
+    val latestOnHoldStart by rememberUpdatedState(onHoldStart)
+    val latestOnHoldEnd by rememberUpdatedState(onHoldEnd)
+    val latestOnHoldCancel by rememberUpdatedState(onHoldCancel)
 
-    // 交互状态动画
-    val isPressed = phase == AppPhase.RECORDING
-    val scale by animateFloatAsState(targetValue = if (isPressed) 0.94f else 1.0f, label = "scale")
-    val elevation by animateDpAsState(targetValue = if (isPressed) 2.dp else 12.dp, label = "elevation")
+    val scale by animateFloatAsState(
+        targetValue = if (isRecording) 0.92f else 1f,
+        label = "micScale"
+    )
 
-    // 红宝石对讲机拟物化色值
-    val darkRuby = if (enabled) Color(0xFF6B0000) else Color(0xFF4A4A4A)
-    val brightRuby = if (enabled) Color(0xFFB81414) else Color(0xFF8A8A8A)
-    val metalBorder = Color(0xFF8A766A)
-
-    Surface(
-        modifier = modifier
-            .size(width = 240.dp, height = 76.dp)
-            .scale(scale)
-            .shadow(elevation = elevation, shape = RoundedCornerShape(40.dp), clip = false)
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val downTime = System.currentTimeMillis()
-                    onHoldStart()
-
-                    val up = waitForUpOrCancellation()
-                    val upTime = System.currentTimeMillis()
-
-                    if (up != null) {
-                        val duration = upTime - downTime
-                        if (duration < 500) {
-                            onHoldCancel()
-                            Toast.makeText(context, "录音时间太短", Toast.LENGTH_SHORT).show()
-                        } else {
-                            onHoldEnd(duration)
-                        }
-                    } else {
-                        onHoldCancel()
-                    }
-                }
-            },
-        shape = RoundedCornerShape(40.dp),
-        color = Color.Transparent,
-        border = BorderStroke(2.5.dp, metalBorder)
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(brightRuby, darkRuby)))
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.width(WaveSlotWidth),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            RecordingSoundWave(isActive = isRecording, mirrored = true)
+        }
+
+        Box(
+            modifier = Modifier.size(MicRippleContainerSize),
             contentAlignment = Alignment.Center
         ) {
-            // 文字
-            Text(
-                text = buttonText,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                modifier = Modifier.align(Alignment.Center)
-            )
+            if (!blocksNewHold || isRecording) {
+                MicRippleRings(
+                    buttonSize = MicButtonSize,
+                    isRecording = isRecording
+                )
+            }
 
-            // 手绘对讲机网孔
-            WalkieTalkieSpeakerDots(modifier = Modifier.align(Alignment.CenterEnd))
+            Box(
+                modifier = Modifier
+                    .size(MicButtonSize)
+                    .scale(scale)
+                    .clip(CircleShape)
+                    .background(micTint)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            val phaseAtDown = ShellUiProjector.phase(latestUiState)
+                            val recordingAtDown = phaseAtDown == AppPhase.RECORDING
+                            val blockAtDown = when (latestUiState.shellMode) {
+                                ShellMode.OPENCLAW -> phaseAtDown == AppPhase.SENDING
+                                else -> phaseAtDown == AppPhase.PROCESSING || phaseAtDown == AppPhase.SENDING
+                            }
+                            if (blockAtDown && !recordingAtDown) return@awaitEachGesture
+
+                            val downTime = System.currentTimeMillis()
+                            latestOnHoldStart()
+                            try {
+                                val up = waitForUpOrCancellation()
+                                val upTime = System.currentTimeMillis()
+                                if (up != null) {
+                                    val duration = upTime - downTime
+                                    if (duration < 500) {
+                                        latestOnHoldCancel()
+                                        Toast.makeText(context, "录音时间太短", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        latestOnHoldEnd(duration)
+                                    }
+                                } else {
+                                    latestOnHoldCancel()
+                                }
+                            } catch (e: CancellationException) {
+                                latestOnHoldCancel()
+                                throw e
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                MicGlyph(
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier.width(WaveSlotWidth),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            RecordingSoundWave(isActive = isRecording, mirrored = false)
         }
     }
 }
 
 @Composable
-private fun WalkieTalkieSpeakerDots(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(width = 16.dp, height = 32.dp)) {
-        val dotRadius = 1.5.dp.toPx()
-        val spacingX = 6.dp.toPx()
-        val spacingY = 6.dp.toPx()
-        val dotColor = Color(0x66000000) // 半透明黑色模拟凹陷的孔
+private fun MicGlyph(
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val bodyWidth = w * 0.42f
+        val bodyHeight = h * 0.52f
+        val bodyLeft = (w - bodyWidth) / 2f
+        val bodyTop = h * 0.08f
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(bodyLeft, bodyTop),
+            size = Size(bodyWidth, bodyHeight),
+            cornerRadius = CornerRadius(bodyWidth / 2f, bodyWidth / 2f)
+        )
+        val arcLeft = w * 0.18f
+        val arcTop = h * 0.34f
+        val arcSize = w * 0.64f
+        drawArc(
+            color = tint,
+            startAngle = 0f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(arcLeft, arcTop),
+            size = Size(arcSize, arcSize * 0.72f),
+            style = Stroke(width = w * 0.09f)
+        )
+        val stemWidth = w * 0.1f
+        val stemTop = h * 0.66f
+        val stemHeight = h * 0.14f
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset((w - stemWidth) / 2f, stemTop),
+            size = Size(stemWidth, stemHeight),
+            cornerRadius = CornerRadius(stemWidth / 2f, stemWidth / 2f)
+        )
+        val baseWidth = w * 0.34f
+        val baseHeight = w * 0.09f
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset((w - baseWidth) / 2f, h * 0.84f),
+            size = Size(baseWidth, baseHeight),
+            cornerRadius = CornerRadius(baseHeight / 2f, baseHeight / 2f)
+        )
+    }
+}
 
-        val startX = size.width / 2 - spacingX / 2
-        val startY = size.height / 2 - spacingY * 2
+@Composable
+private fun MicRippleRings(
+    buttonSize: Dp,
+    isRecording: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val baseRadiusPx = with(density) { buttonSize.toPx() / 2f }
+    val rippleColor = AppColors.micGreen
+    val duration = if (isRecording) 1200 else 1800
+    val maxExpansion = if (isRecording) 1f else 0.85f
+    val peakAlpha = if (isRecording) 0.4f else 0.28f
 
-        for (col in 0..1) {
-            for (row in 0..4) {
-                drawCircle(
-                    color = dotColor,
-                    radius = dotRadius,
-                    center = Offset(
-                        x = startX + col * spacingX,
-                        y = startY + row * spacingY
-                    )
-                )
-            }
+    val infiniteTransition = rememberInfiniteTransition(label = "micRipples")
+
+    val progress1 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = duration, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple1"
+    )
+    val progress2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = duration,
+                delayMillis = duration / 2,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple2"
+    )
+
+    Canvas(modifier = modifier.size(MicRippleContainerSize)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        listOf(progress1, progress2).forEach { progress ->
+            val radius = baseRadiusPx * (1f + progress * maxExpansion)
+            val alpha = (1f - progress) * peakAlpha
+            drawCircle(
+                color = rippleColor.copy(alpha = alpha),
+                radius = radius,
+                center = center
+            )
         }
     }
 }

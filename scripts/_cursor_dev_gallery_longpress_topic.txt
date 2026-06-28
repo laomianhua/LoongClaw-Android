@@ -1,0 +1,205 @@
+话题：画廊 v2 — 纵向逐张展示 + 长按下载原图（替代点选批量方案）
+
+## 背景 / 为何改契约
+
+真机联调结论：**点选 + 「下载选中 (N)」** 链路过长，易断：
+- 依赖 `__LITTLEHELPER_GALLERY__` 探测时机、Deep Link 点选、`__LH_gallerySetSelected`、App 原生底栏等多环节；
+- 用户侧常见现象：看不到「下载选中」按钮、HTML/App 双份下载 UI 混乱。
+
+**新方案（App 与产品已对齐）：**
+- 画廊 = **从上到下纵向排列**，一张接一张展示（可带 caption）；
+- 用户 **长按某一张** → App 下载该张 **原图** 到相册；
+- **不做** 多选、打勾、批量底栏、JS lightbox。
+
+白板外层手势不变：
+| 手势 | 行为 |
+|------|------|
+| 左右滑（明显横向） | 切白板历史页 |
+| 上下滑 | WebView 内纵向滚动 |
+| 长按不动 | 下载当前那张（不与上述冲突） |
+
+单图场景（非画廊）仍用已有 **`__LITTLEHELPER_IMAGE__` + App 右下角 ↓**，已验收，不变。
+
+---
+
+## Gateway 需实现的契约
+
+### 1) 页面生成方式（保持你们现有机制）
+
+- Agent 调 `generate_gallery.py` 生成 **`gallery_cache_{timestamp}.html`**；
+- MODAL 下发 **完整 URL**（可带 `?_t=` 防缓存），App 只加载 MODAL 里的 `url`，不关心固定文件名。
+
+示例 MODAL：
+
+```json
+===CHAT===
+会员卡相册已打开
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "gallery-membership",
+    "type": "webview",
+    "title": "会员卡相册",
+    "data": {
+      "url": "/__openclaw__/canvas/gallery_cache_1719300000000.html?_t=1719300000000",
+      "scrollable": true,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+### 2) 元数据：`window.__LITTLEHELPER_GALLERY__`
+
+页面加载后设置（**不要**与 `__LITTLEHELPER_IMAGE__` 同页并存）：
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "会员卡相册",
+  items: [
+    {
+      fileId: "94b13de8",
+      fileName: "94b13de811b14923...jpg",   // storage 文件名
+      displayName: "会员卡",
+      mimeType: "image/jpeg",
+      downloadUrl: "http://{host}:18889/file/download/94b13de811b14923...jpg",
+      thumbUrl: "http://{host}:18889/file/download/94b13de811b14923...jpg"
+    },
+    {
+      fileId: "a1b2c3d4",
+      fileName: "a1b2c3d4...jpg",
+      displayName: "大胖（沙发）",
+      mimeType: "image/jpeg",
+      downloadUrl: "http://{host}:18889/file/download/a1b2c3d4...jpg",
+      thumbUrl: "http://{host}:18889/file/download/a1b2c3d4...jpg"
+    }
+  ]
+};
+```
+
+**字段约定：**
+- `items` 为数组，**index 从 0 起**，顺序即页面从上到下展示顺序；
+- `downloadUrl` / `thumbUrl`：推荐页面 JS 用 `location.hostname` 填 host（与现网一致）；App 对绝对 URL **原样 GET**，不拼 host；
+- `displayName`：保存到相册时的友好文件名（App 优先用它）；
+- `items.length === 1` 仍走 gallery 契约（长按下载），不必改回 `__LITTLEHELPER_IMAGE__`；
+- 建议 **items ≤ 20**；
+- 禁止 `?files=a.jpg,b.jpg` 逗号串传参，只用 JSON 全局变量。
+
+### 3) 布局：纵向单列，禁止 lightbox
+
+```html
+<!-- 结构示意 -->
+<div class="lh-gallery">
+  <h1>会员卡相册</h1>
+  <div class="lh-item" data-index="0">
+    <img src="..." alt="会员卡"/>
+    <p class="lh-caption">会员卡</p>
+  </div>
+  <div class="lh-item" data-index="1">...</div>
+</div>
+```
+
+**CSS 要求：**
+- **单列纵向**列表，`img { max-width: 100%; height: auto; display: block; }`；
+- **禁止** 2 列缩略图网格（旧版）、**禁止** `position:fixed` 全屏 lightbox / 横向 carousel；
+- `touch-action: manipulation;` 减少点击延迟；
+- `-webkit-touch-callout: none;` + 拦截 `contextmenu`，避免 Android 系统长按菜单与下载抢戏。
+
+### 4) 交互：长按 → Deep Link（核心）
+
+**废弃（v2 不再使用）：**
+- `littlehelper://gallery/toggle?index=N`（点选）
+- `littlehelper://gallery/selectAll` / `deselectAll`
+- `window.__LH_gallerySetSelected`
+- `window.__LH_galleryGetSelected`
+- HTML 底部「下载选中」兜底按钮（App 不再依赖）
+
+**新增：长按某张 →**
+
+```
+littlehelper://gallery/download?index=N
+```
+
+N 为 `items` 下标。App 在 `shouldOverrideUrlLoading` 拦截（与高德、`gallery/toggle` 同模式），**不离开 WebView**。
+
+**HTML 推荐实现（示意）：**
+
+```javascript
+(function () {
+  var LONG_PRESS_MS = 500;
+  var MOVE_CANCEL_PX = 12;
+
+  function bindLongPress(el, index) {
+    var timer = null;
+    var startX = 0, startY = 0;
+
+    function clear() {
+      if (timer) { clearTimeout(timer); timer = null; }
+    }
+
+    el.addEventListener('touchstart', function (e) {
+      if (!e.touches || !e.touches.length) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      clear();
+      timer = setTimeout(function () {
+        timer = null;
+        window.location.href = 'littlehelper://gallery/download?index=' + index;
+      }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    el.addEventListener('touchmove', function (e) {
+      if (!timer || !e.touches || !e.touches.length) return;
+      var dx = Math.abs(e.touches[0].clientX - startX);
+      var dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) clear();
+    }, { passive: true });
+
+    el.addEventListener('touchend', clear, { passive: true });
+    el.addEventListener('touchcancel', clear, { passive: true });
+  }
+
+  document.querySelectorAll('.lh-item[data-index]').forEach(function (el) {
+    bindLongPress(el, parseInt(el.getAttribute('data-index'), 10));
+  });
+})();
+```
+
+**可选 UX：** 长按时 `.lh-item` 加 `lh-pressing` 类（轻微缩放/遮罩），松手或取消时去掉；**不要** 做全屏预览。
+
+### 5) 下载 HTTP
+
+与单图 ↓ 相同：
+- `GET items[N].downloadUrl`；
+- 鉴权：若走 Gateway 主端口 `/__openclaw__/file/download/...` 则 Bearer（与 Canvas 一致）；若走 `:18889/file/download/...` 按你们 upload 服务规则；
+- App 写入 `Pictures/LittleHelper/`，Toast 成功/失败。
+
+**v2 不做「一键下载全部」**；若以后要加，可预留 `littlehelper://gallery/downloadAll`（App 暂未实现）。
+
+---
+
+## App 端计划（供 Gateway 知悉）
+
+| 组件 | v2 改动 |
+|------|---------|
+| `GalleryDeepLink` | 新增 `download?index=N`；**移除或忽略** `toggle` / selectAll |
+| `CanvasWebViewBridge` | 仍读 `__LITTLEHELPER_GALLERY__`；**移除**选中状态、`__LH_gallerySetSelected` 同步 |
+| `ModalHistoryCanvasShell` | **移除**「下载选中 (N)」底栏；画廊模式 **隐藏** 单图 ↓ |
+| `StoredImageDownloader` | 复用单张 `downloadToGallery` |
+| 不变 | 白板左右滑历史、单图 `__LITTLEHELPER_IMAGE__` + ↓、截图 FAB |
+
+App 会在 Gateway 确认本契约后开始改代码；联调前请部署一版符合 v2 的 `gallery_cache_*.html`。
+
+---
+
+## 请 Gateway 回复
+
+1. 是否同意 **纵向单列 + 长按 `littlehelper://gallery/download?index=N`** 替代点选批量方案？
+2. `generate_gallery.py` / 模板何时按 v2 更新？能否给一条测试 MODAL（含完整 `gallery_cache_*.html` URL）？
+3. `downloadUrl` 端口确认：**18889** 还是其他？（请与 upload 服务一致，避免 App 401/404）
+4. 旧契约字段/Deep Link 是否可下线时间表？
+
+请只针对本话题回复；信息不足时列假设并给推荐方案。

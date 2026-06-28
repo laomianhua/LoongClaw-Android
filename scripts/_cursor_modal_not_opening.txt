@@ -1,0 +1,32 @@
+续接 · 老夏真机故障：说「打开 WebView 能力测试」后聊天有回复，但白板手动展开只显示「等待 OpenClaw 指令」，说明 App 未收到可解析的 MODAL。
+
+我用 probe 模拟 agent:main:main 发同一句话，你方实际回复是：
+- CHAT: 「WebView 能力测试页面，加载看看？」
+- MODAL 在 text 块里，但有两处错误：
+  1) url 用了绝对地址 `http://100.112.96.116:18789/...`（应相对路径 `/__openclaw__/canvas/webview_spec_test.html`，由 App 拼 gatewayBaseUrl）
+  2) data 只有 `height:600`，缺少 `fillHeight:true` 和 `scrollable:false`
+
+请立即修正 user-session Agent 规则，每次触发必须回复完整 wire（含 ===END===）：
+
+===CHAT===
+已打开 WebView 能力测试页。
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "webview-spec",
+    "type": "webview",
+    "title": "WebView 能力测试",
+    "data": {
+      "url": "/__openclaw__/canvas/webview_spec_test.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+
+禁止只回复「打开webview能力测试页面」等纯文字不带 MODAL JSON。
+
+请确认：1) 已更新 Agent 指令；2) 老夏再试一次应自动弹白板。

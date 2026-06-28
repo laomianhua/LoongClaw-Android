@@ -1,0 +1,358 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 240s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+缁帴涓婁竴璇濋锛氭枃浠跺唴瀹瑰涓嬶紝璇风珛鍗冲啓鍏?canvas/webview_spec_test.html锛堝嵆 ~/.openclaw/canvas/webview_spec_test.html锛夈€?
+
+鍐欏叆鍚庤锛?
+1) curl 楠岃瘉 HTTP 200
+2) 纭 App 鐢ㄦ埛浼氳瘽瑙﹀彂璇濇湳锛氥€屾墦寮€ WebView 鑳藉姏娴嬭瘯銆?
+3) 鍥炲 A/B/C/D 鍥涢」纭
+
+---BEGIN webview_spec_test.html (10535 bytes)---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>WebView 鑳藉姏娴嬭瘯</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+  #app { display: flex; flex-direction: column; height: 100%; background: #f0f0f0; }
+  #header {
+    background: #fff; padding: 10px 12px; border-bottom: 1px solid #ddd;
+    font-weight: 600; font-size: 14px; color: #1c1c1e; flex-shrink: 0;
+  }
+  #mapWrap { flex: 1; position: relative; min-height: 0; background: #dde3ea; }
+  #mapCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  #overlay {
+    position: absolute; top: 12px; left: 12px; z-index: 2;
+    background: rgba(255,255,255,.94); padding: 6px 10px; border-radius: 8px;
+    font-size: 12px; color: #333; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  }
+  #zoomBar {
+    position: absolute; bottom: 12px; right: 12px; z-index: 3;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #zoomBar button {
+    width: 36px; height: 36px; border: none; border-radius: 8px;
+    background: #fff; font-size: 20px; line-height: 1;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2); color: #007aff;
+  }
+  #checks {
+    background: #fff; border-top: 1px solid #ddd; max-height: 34%;
+    overflow: auto; padding: 8px 12px 12px; flex-shrink: 0;
+  }
+  .check { margin: 5px 0; font-size: 12px; line-height: 1.45; }
+  .pass { color: #2e7d32; }
+  .fail { color: #c62828; }
+  .pending { color: #888; }
+  .summary { font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">馃搷 WebView 鑳藉姏娴嬭瘯 路 鍗庝涵鍢夊洯 Canvas 瑙勮寖</div>
+  <div id="mapWrap">
+    <canvas id="mapCanvas"></canvas>
+    <div id="overlay">CSS 缁濆瀹氫綅 路 z-index 灞?/div>
+    <div id="zoomBar">
+      <button id="zoomIn" type="button" aria-label="鏀惧ぇ">+</button>
+      <button id="zoomOut" type="button" aria-label="缂╁皬">鈭?/button>
+    </div>
+  </div>
+  <div id="checks"></div>
+</div>
+<script>
+(() => {
+  const TILE = 256;
+  const checksEl = document.getElementById("checks");
+  const canvas = document.getElementById("mapCanvas");
+  const mapWrap = document.getElementById("mapWrap");
+  const overlay = document.getElementById("overlay");
+  const tileCache = new Map();
+  const state = {
+    zoom: 16,
+    cx: 116.3617,
+    cy: 39.9785,
+    tileOk: false,
+    tileDrawn: false,
+    tilesVisible: 0,
+    zoomClicked: false,
+    loadGen: 0
+  };
+
+  const tests = [
+    { id: "js", name: "JavaScript 宸插惎鐢?, run: () => true },
+    { id: "flex", name: "flex:1 鍦板浘鍖烘拺婊＄櫧鏉匡紙闈炲浐瀹?400px锛?, run: () => checkFlexLayout() },
+    { id: "canvas", name: "Canvas 2D 涓婁笅鏂囧彲鐢?, run: () => !!canvas.getContext("2d") },
+    { id: "css", name: "CSS 缁濆瀹氫綅 + z-index 娴眰鍙", run: () => {
+      const r = overlay.getBoundingClientRect();
+      return r.width > 40 && r.height > 16;
+    }},
+    { id: "draw", name: "Canvas 缁樺埗 marker 涓庢爣娉?, run: () => drawFrame() },
+    { id: "tile", name: "楂樺痉鐡︾墖鍔犺浇骞剁粯鍒讹紙闇€缃戠粶锛?, run: () => state.tileDrawn, async: true },
+    { id: "zoom", name: "卤 缂╂斁鎸夐挳宸叉樉绀猴紙鐐逛竴涓嬮獙璇佷氦浜掞級", run: () => checkZoomVisible() }
+  ];
+
+  function checkFlexLayout() {
+    const h = mapWrap.clientHeight;
+    const appH = document.getElementById("app").clientHeight || window.innerHeight;
+    const ratio = appH > 0 ? h / appH : 0;
+    return h >= 80 && ratio >= 0.2;
+  }
+
+  function checkZoomVisible() {
+    const btn = document.getElementById("zoomIn");
+    if (!btn) return false;
+    const r = btn.getBoundingClientRect();
+    return r.width >= 28 && r.height >= 28;
+  }
+
+  function flexDetail() {
+    const h = mapWrap.clientHeight;
+    const appH = document.getElementById("app").clientHeight || window.innerHeight;
+    const ratio = appH > 0 ? Math.round((h / appH) * 100) : 0;
+    return h + "px锛堝崰椤甸潰 " + ratio + "%锛?;
+  }
+
+  function setStatus(id, ok, detail) {
+    const el = document.getElementById("chk-" + id);
+    if (!el) return;
+    el.className = "check " + (ok ? "pass" : "fail");
+    el.textContent = (ok ? "鉁?" : "鉁?") + el.dataset.label + (detail ? " 鈥?" + detail : "");
+  }
+
+  function renderList() {
+    checksEl.innerHTML = '<div class="summary">鑷娓呭崟锛圓pp 渚ч€氳繃鍚庡啀浜ょ粰 Gateway 鍙戝竷鍚岃矾寰勬枃浠讹級</div>';
+    tests.forEach(t => {
+      const div = document.createElement("div");
+      div.id = "chk-" + t.id;
+      div.className = "check pending";
+      div.dataset.label = t.name;
+      div.textContent = "鈥?" + t.name;
+      checksEl.appendChild(div);
+    });
+  }
+
+  function lonLatToPixel(lon, lat, z) {
+    const n = Math.pow(2, z);
+    const x = (lon + 180) / 360 * n * TILE;
+    const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n * TILE;
+    return { x, y };
+  }
+
+  function mapOrigin() {
+    const w = mapWrap.clientWidth;
+    const h = mapWrap.clientHeight;
+    const center = lonLatToPixel(state.cx, state.cy, state.zoom);
+    const tx = Math.floor(center.x / TILE);
+    const ty = Math.floor(center.y / TILE);
+    const ox = w / 2 - (center.x - tx * TILE);
+    const oy = h / 2 - (center.y - ty * TILE);
+    return { w, h, tx, ty, ox, oy };
+  }
+
+  function tileJobs() {
+    const { w, h, tx, ty } = mapOrigin();
+    const radiusX = Math.ceil(w / TILE / 2) + 1;
+    const radiusY = Math.ceil(h / TILE / 2) + 1;
+    const jobs = [];
+    for (let dy = -radiusY; dy <= radiusY; dy++) {
+      for (let dx = -radiusX; dx <= radiusX; dx++) {
+        jobs.push({ x: tx + dx, y: ty + dy, dx, dy });
+      }
+    }
+    return jobs;
+  }
+
+  function tileKey(z, x, y) {
+    return z + "/" + x + "/" + y;
+  }
+
+  function tileUrl(z, x, y) {
+    return "https://webrd0" + ((x + y) % 4 + 1) + ".is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=" + x + "&y=" + y + "&z=" + z;
+  }
+
+  function drawFrame() {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    const { w, h, ox, oy } = mapOrigin();
+
+    ctx.fillStyle = "#dde3ea";
+    ctx.fillRect(0, 0, w, h);
+
+    let visible = 0;
+    tileJobs().forEach(({ x, y, dx, dy }) => {
+      const img = tileCache.get(tileKey(state.zoom, x, y));
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, ox + dx * TILE, oy + dy * TILE, TILE, TILE);
+        visible++;
+      }
+    });
+    state.tilesVisible = visible;
+
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < w; x += 32) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y < h; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    const px = w / 2;
+    const py = h / 2;
+    ctx.beginPath();
+    ctx.arc(px, py, 28, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,122,255,.18)";
+    ctx.fill();
+    ctx.strokeStyle = "#007aff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff3b30";
+    ctx.fill();
+
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px system-ui,sans-serif";
+    ctx.strokeStyle = "rgba(0,0,0,.35)";
+    ctx.lineWidth = 3;
+    const label = "鍗庝涵鍢夊洯 路 z" + state.zoom + " 路 " + visible + " 鐗囩摝鐗?;
+    ctx.strokeText(label, 12, h - 12);
+    ctx.fillText(label, 12, h - 12);
+    return true;
+  }
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = mapWrap.clientWidth;
+    const h = mapWrap.clientHeight;
+    canvas.width = Math.max(1, Math.floor(w * dpr));
+    canvas.height = Math.max(1, Math.floor(h * dpr));
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawFrame();
+  }
+
+  function loadTiles() {
+    const gen = ++state.loadGen;
+    state.tileOk = false;
+    state.tileDrawn = false;
+    const jobs = tileJobs();
+    if (jobs.length === 0) return;
+
+    let cachedReady = 0;
+    const toFetch = [];
+
+    jobs.forEach(({ x, y }) => {
+      const key = tileKey(state.zoom, x, y);
+      const cached = tileCache.get(key);
+      if (cached && cached.complete && cached.naturalWidth > 0) {
+        cachedReady++;
+      } else {
+        toFetch.push({ key, x, y });
+      }
+    });
+
+    if (toFetch.length === 0) {
+      finishTileLoad(gen, cachedReady);
+      return;
+    }
+
+    let fetched = 0;
+    let fetchOk = 0;
+
+    toFetch.forEach(({ key, x, y }) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const done = (ok) => {
+        if (gen !== state.loadGen) return;
+        if (ok) {
+          tileCache.set(key, img);
+          fetchOk++;
+        }
+        fetched++;
+        if (fetched >= toFetch.length) {
+          finishTileLoad(gen, cachedReady + fetchOk);
+        }
+      };
+      img.onload = () => done(true);
+      img.onerror = () => done(false);
+      img.src = tileUrl(state.zoom, x, y);
+    });
+  }
+
+  function finishTileLoad(gen, ready) {
+    if (gen !== state.loadGen) return;
+    state.tileOk = ready > 0;
+    state.tileDrawn = ready > 0;
+    drawFrame();
+    if (state.tileDrawn) {
+      setStatus("tile", true, state.tilesVisible + " 鐗囩摝鐗囧彲瑙?);
+    } else {
+      setStatus("tile", false, "鐡︾墖璇锋眰澶辫触");
+    }
+    runSync();
+  }
+
+  function runSync() {
+    tests.filter(t => !t.async).forEach(t => {
+      const ok = !!t.run();
+      let detail = "";
+      if (t.id === "flex") detail = flexDetail();
+      if (t.id === "zoom" && state.zoomClicked) detail = "z" + state.zoom;
+      setStatus(t.id, ok, detail);
+    });
+  }
+
+  function scheduleLayoutChecks() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resizeCanvas();
+        runSync();
+      });
+    });
+  }
+
+  function changeZoom(delta) {
+    state.zoomClicked = true;
+    state.zoom = Math.max(10, Math.min(18, state.zoom + delta));
+    resizeCanvas();
+    loadTiles();
+    setStatus("zoom", checkZoomVisible(), "z" + state.zoom);
+  }
+
+  document.getElementById("zoomIn").addEventListener("click", () => changeZoom(1));
+  document.getElementById("zoomOut").addEventListener("click", () => changeZoom(-1));
+
+  renderList();
+  scheduleLayoutChecks();
+  loadTiles();
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    loadTiles();
+    runSync();
+  });
+})();
+</script>
+</body>
+</html>
+
+---END webview_spec_test.html---
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?240s 鈥?
+WARN: 240s 鍐呮棤 Agent 鍥炲锛圙ateway 鍙兘浠嶅湪閲嶅惎鎴?Agent 鏈氨缁級

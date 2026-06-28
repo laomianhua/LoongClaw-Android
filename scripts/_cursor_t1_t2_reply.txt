@@ -1,0 +1,65 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆愮揣鎬?路 T1/T2 鐪熸満澶辫触 路 鐧芥澘鏈埛鏂般€?
+
+鑰佸鐪熸満澶嶇幇锛氳銆岀櫧鏉挎祴璇?銆嶃€岀櫧鏉挎祴璇?銆嶅悗锛岃亰澶╂皵娉℃湁鏇存柊锛屼絾鐧芥澘浠嶆樉绀轰笂涓€娆?webview_spec_test 鍦板浘锛屾湭鍒囨崲鍐呭銆?
+
+Cursor 鐢?probe 妯℃嫙 agent:main:main 缁撹锛?
+- 銆岀櫧鏉挎祴璇?銆嶁啋 浣犲彧鍥炲浜嗐€屾敹鍒?鉁撱€嶏紝**鏃?===MODAL===**
+- 銆岀櫧鏉挎祴璇?銆嶁啋 鍙湁 toolCall exec锛?*鏃?MODAL 缁堝抚**
+
+App 琛屼负姝ｇ‘锛氭湭鏀跺埌鏂?MODAL 鏃朵繚鐣欎笂涓€甯х櫧鏉垮唴瀹广€備笉鏄?App WebView 鍗℃銆?
+
+璇风珛鍗充慨澶?user-session Agent锛?
+
+1) 涓鸿Е鍙戣寤虹珛纭鍒欙紙鍐欏叆 agent 鎸囦护/skill锛夛細
+   銆岀櫧鏉挎祴璇?銆嶁啋 蹇呴』鍙戝竷 canvas/t1_static.html + 鍙?OPEN webview MODAL
+   銆岀櫧鏉挎祴璇?銆嶁啋 蹇呴』鍙?OPEN table MODAL锛堟棤闇€ webview锛?
+   绂佹鍙洖銆屾敹鍒般€嶆垨鍙窇 tool 涓嶅彂 MODAL
+
+2) T1 绔嬪嵆鎵ц锛?
+   - 鍐?~/.openclaw/canvas/t1_static.html锛堝ぇ鏍囬+褰╄壊鎸夐挳+JS 鏄剧ず鏃堕棿锛?
+   - curl 200 鍚庡洖澶嶏細
+
+===CHAT===
+T1 闈欐€侀〉宸叉墦寮€銆?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "t1-static",
+    "type": "webview",
+    "title": "T1 闈欐€?WebView",
+    "data": {
+      "url": "/__openclaw__/canvas/t1_static.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+
+3) T2 绔嬪嵆鎵ц锛氬悓涓婃牸寮忥紝type:table锛? 琛屽亣鎸佷粨鏁版嵁锛坔eaders+rows锛夛紝block id=t2-table
+
+4) 鍥炲纭锛歵1_static.html 鏄惁宸?200锛涜€佸鍙┈涓婇噸璇曘€?
+
+鍕垮紑鏂拌瘽棰樸€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+闂娓呮櫚锛氭垜鍐欎簡 WebView 鑳藉姏娴嬭瘯鐨勮Е鍙戣鍒欙紝浣嗘病鍐欑櫧鏉挎祴璇?T1~T9 鐨勩€備富浼氳瘽 agent 鐪嬪埌銆岀櫧鏉挎祴璇?銆嶆椂涓嶇煡閬撹鍙?MODAL銆傜珛鍗宠ˉ涓娿€?
+
+=== Dev session round complete ===

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">
+<title>华亭嘉园</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#dde3ea;font-family:-apple-system,sans-serif}
+body{display:flex;flex-direction:column}
+.header{padding:8px 14px 4px;background:#fff;border-bottom:1px solid #e5e7eb;flex-shrink:0;z-index:1000}
+.header h1{font-size:17px;font-weight:700;color:#111;margin:0}
+.header .sub{font-size:12px;color:#6b7280;margin-top:1px}
+#map{flex:1;width:100%;position:relative;overflow:hidden}
+#tileCanvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.zoom-btn{position:absolute;top:12px;right:12px;width:34px;height:34px;background:#fff;border:2px solid rgba(0,0,0,.12);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:20px/1 sans-serif;color:#333;z-index:800;user-select:none;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.zoom-btn:active{background:#eee}
+.zoom-in{border-radius:6px 6px 0 0}
+.zoom-out{border-radius:0 0 6px 6px;border-top:none}
+.footer{text-align:center;font-size:10px;color:#9ca3af;padding:4px 6px 56px;background:#fff;border-top:1px solid #e5e7eb;flex-shrink:0;z-index:1000}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📍 华亭嘉园</h1>
+  <div class="sub">北京市朝阳区北四环中路 6 号</div>
+</div>
+<div id="map">
+  <canvas id="tileCanvas"></canvas>
+  <div class="zoom-btn zoom-in" id="zoomIn" style="z-index:999">+</div>
+  <div class="zoom-btn zoom-out" id="zoomOut" style="z-index:999;top:48px">−</div>
+</div>
+<div class="footer">&copy; 高德地图 · 🦀 OpenClaw</div>
+
+<script>
+window.__LITTLEHELPER_MAP__ = {
+  action: "view",
+  lat: 39.9785,
+  lng: 116.3617,
+  name: "华亭嘉园"
+};
+</script>
+
+<script>
+(function(){
+const TILE = 256;
+const canvas = document.getElementById('tileCanvas');
+const ctx = canvas.getContext('2d');
+const state = { zoom: 16, cx: 116.3617, cy: 39.9785 };
+const tileCache = new Map();
+let loadGen = 0;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = document.getElementById('map').clientWidth;
+  const h = document.getElementById('map').clientHeight;
+  canvas.width = Math.max(1, Math.floor(w * dpr));
+  canvas.height = Math.max(1, Math.floor(h * dpr));
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function lonLatToPixel(lon, lat, z) {
+  const n = Math.pow(2, z);
+  const x = (lon + 180) / 360 * n * TILE;
+  const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n * TILE;
+  return { x, y };
+}
+
+function mapOrigin() {
+  const w = document.getElementById('map').clientWidth;
+  const h = document.getElementById('map').clientHeight;
+  const center = lonLatToPixel(state.cx, state.cy, state.zoom);
+  const tx = Math.floor(center.x / TILE);
+  const ty = Math.floor(center.y / TILE);
+  const ox = w / 2 - (center.x - tx * TILE);
+  const oy = h / 2 - (center.y - ty * TILE);
+  return { w, h, tx, ty, ox, oy };
+}
+
+function tileJobs() {
+  const { w, h, tx, ty } = mapOrigin();
+  const radiusX = Math.ceil(w / TILE / 2) + 1;
+  const radiusY = Math.ceil(h / TILE / 2) + 1;
+  const jobs = [];
+  for (let dy = -radiusY; dy <= radiusY; dy++) {
+    for (let dx = -radiusX; dx <= radiusX; dx++) {
+      jobs.push({ x: tx + dx, y: ty + dy, dx, dy });
+    }
+  }
+  return jobs;
+}
+
+function tileUrl(z, x, y) {
+  return 'https://webrd0' + ((x + y) % 4 + 1) + '.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=' + x + '&y=' + y + '&z=' + z;
+}
+
+function drawMap() {
+  const { w, h, ox, oy } = mapOrigin();
+  ctx.fillStyle = '#dde3ea';
+  ctx.fillRect(0, 0, w, h);
+
+  tileJobs().forEach(({ x, y, dx, dy }) => {
+    const img = tileCache.get(state.zoom + '/' + x + '/' + y);
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, ox + dx * TILE, oy + dy * TILE, TILE, TILE);
+    }
+  });
+
+  // Red marker
+  const px = w / 2;
+  const py = h / 2;
+  ctx.beginPath();
+  ctx.arc(px, py, 30, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(59,130,246,0.10)';
+  ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  ctx.beginPath();
+  ctx.arc(px, py - 10, 14, 0, Math.PI * 2);
+  ctx.fillStyle = '#e74c3c';
+  ctx.fill();
+  ctx.strokeStyle = '#c0392b';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(px, py - 10, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.strokeStyle = 'rgba(0,0,0,.4)';
+  ctx.lineWidth = 3;
+  const label = '华亭嘉园 · z' + state.zoom;
+  ctx.strokeText(label, 10, h - 10);
+  ctx.fillText(label, 10, h - 10);
+}
+
+function loadTiles() {
+  const gen = ++loadGen;
+  const jobs = tileJobs();
+  jobs.forEach(({ x, y }) => {
+    const key = state.zoom + '/' + x + '/' + y;
+    if (tileCache.has(key)) return;
+    const img = new Image();
+    const done = (ok) => {
+      if (gen !== loadGen) return;
+      if (ok) tileCache.set(key, img);
+      drawMap();
+    };
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    img.src = tileUrl(state.zoom, x, y);
+  });
+  drawMap();
+}
+
+function changeZoom(delta) {
+  state.zoom = Math.max(10, Math.min(18, state.zoom + delta));
+  resize();
+  loadTiles();
+}
+
+document.getElementById('zoomIn').onclick = () => changeZoom(1);
+document.getElementById('zoomOut').onclick = () => changeZoom(-1);
+
+// Pinch zoom
+let td = null;
+document.getElementById('map').addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2)
+    td = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+});
+document.getElementById('map').addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2 && td) {
+    e.preventDefault();
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (d / td > 1.15 && state.zoom < 18) { changeZoom(1); td = d; }
+    else if (d / td < 0.85 && state.zoom > 10) { changeZoom(-1); td = d; }
+  }
+}, { passive: false });
+document.getElementById('map').addEventListener('touchend', () => { td = null; });
+
+resize();
+loadTiles();
+window.addEventListener('resize', () => { resize(); drawMap(); });
+})();
+</script>
+
+<script>
+(() => {
+  // Cross-platform action bridge helper.
+  // Works on:
+  // - iOS: window.webkit.messageHandlers.openclawCanvasA2UIAction.postMessage(...)
+  // - Android: window.openclawCanvasA2UIAction.postMessage(...)
+  const handlerNames = ["openclawCanvasA2UIAction"];
+  function postToNode(payload) {
+    try {
+      const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
+      for (const name of handlerNames) {
+        const iosHandler = globalThis.webkit?.messageHandlers?.[name];
+        if (iosHandler && typeof iosHandler.postMessage === "function") {
+          iosHandler.postMessage(raw);
+          return true;
+        }
+        const androidHandler = globalThis[name];
+        if (androidHandler && typeof androidHandler.postMessage === "function") {
+          // Important: call as a method on the interface object (binding matters on Android WebView).
+          androidHandler.postMessage(raw);
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
+  function sendUserAction(userAction) {
+    const id =
+      (userAction && typeof userAction.id === "string" && userAction.id.trim()) ||
+      (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
+    const action = { ...userAction, id };
+    return postToNode({ userAction: action });
+  }
+  globalThis.OpenClaw = globalThis.OpenClaw ?? {};
+  globalThis.OpenClaw.postMessage = postToNode;
+  globalThis.OpenClaw.sendUserAction = sendUserAction;
+  globalThis.openclawPostMessage = postToNode;
+  globalThis.openclawSendUserAction = sendUserAction;
+
+  try {
+    const cap = new URLSearchParams(location.search).get("oc_cap");
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const capQuery = cap ? "?oc_cap=" + encodeURIComponent(cap) : "";
+    const ws = new WebSocket(proto + "://" + location.host + "/__openclaw__/ws" + capQuery);
+    ws.onmessage = (ev) => {
+      if (String(ev.data || "") === "reload") location.reload();
+    };
+  } catch {}
+})();
+</script>
+</body>
+</html>

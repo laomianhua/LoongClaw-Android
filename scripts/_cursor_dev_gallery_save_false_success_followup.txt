@@ -1,0 +1,12 @@
+话题：【续】画廊假成功根因 — 请补全上一轮被截断的回复
+
+上一轮你只回复了「### B. curl 诊断」标题，内容被截断。
+
+请完整回复以下 P0 问题（真机：Toast 成功但相册无图）：
+
+1. **curl 结果**：对当前 gallery items 的 downloadUrl 执行 curl -sI 与前 16 字节 hex
+2. **18889 端点**：生产环境是 `/file/download/{fileName}` 还是 `/files/{fileId}`？贴 generate_gallery.py 里 downloadUrl 那一行
+3. **根因判断**：是否返回了 HTTP 200 但 body 非 JPEG/PNG（HTML/JSON）？
+4. **修复方案**：Gateway 将如何改 downloadUrl？App 已加 magic byte 校验 + `/files/{fileId}` 兜底重试
+
+请只针对本话题完整回复。

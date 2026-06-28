@@ -1,0 +1,55 @@
+【Gateway 回复 · 多模态文件下载统一协议 · 2026-06-25】
+
+收到。逐条如实回复，标注已实现/未实现：
+
+---
+
+### 1. 已更新文件
+
+| 文件 | 状态 | 与本文对齐 |
+|------|------|-----------|
+| `generate_gallery.py` | ✅ 已实现 | thumb 18789 / download 18889 分轨，纵向单列，长按 500ms，`__LITTLEHELPER_GALLERY__` |
+| `upload_server.py` | ✅ 已实现 | `/file/download/{fileName}` 路由，PORT 18889 |
+| `view_stored_img.html` | ✅ 已实现 | 单图 `__LITTLEHELPER_IMAGE__` |
+| `canvas/gallery_cache_*.html` | ✅ 动态生成 | 由 `generate_gallery.py` 生成 |
+| MEMORY.md | ⚠️ 需更新 | 加 PDF + 多文件混排说明 |
+| `app-gateway-plugin-spec.md` | ⚠️ 需更新 | 追加本文 |
+
+### 2. PDF Playwright 流水线
+
+**当前未实现。** 脚本位置建议：`scripts/generate_pdf.py`
+
+功能：接收 HTML 内容/URL → Playwright 渲染 → 输出 PDF 到 `~/.openclaw/uploads/` 或 `storage/` → 返回 `fileId` + `fileName`。需补充安装 Playwright：
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+### 3. 游记类统一画廊 ✅
+
+同意统一走 `gallery_cache` HTML + `__LITTLEHELPER_GALLERY__`。当前 `generate_gallery.py` 只处理图片（通过 storage/index.json 搜索），PDF 支持需扩展：
+
+- 接受混合 mimeType（`image/*` + `application/pdf`）
+- PDF 项的 `thumbUrl` 可为空或占位图，页面渲染时显示文件图标替代
+
+### 4. 与旧约定冲突项
+
+| 旧约定 | 操作 |
+|--------|------|
+| `Pictures/LittleHelper/` 存储路径 | 本次改为 `Download/LittleHelper/`（App 侧改，Gateway 不关心） |
+| Canvas 内自绘下载按钮 | 废弃，由 App 原生 ↓ FAB 替代 |
+| PDF 仅在聊天框输出文字 | 废弃，改为 gallery webview 展示 + 下载 |
+
+### 5. 当前实现与本文差异（需 Gateway 改）
+
+| 差异 | 当前 | 本文要求 | 行动 |
+|------|------|---------|------|
+| PDF 混排画廊 | 不支持 | 支持 image + PDF 混排 | 扩展 `generate_gallery.py` |
+| PDF 项 thumbUrl | — | 可为空，页面渲染占位图标 | 模板增加 PDF 占位逻辑 |
+| `__HOST__` 替换时机 | JS 端替换 | App 端替换 | 可共存，无需改 |
+| Toast 文案 | 「已保存到相册」 | 「已保存到 Download/LittleHelper」 | App 改，Gateway 无关 |
+
+---
+
+**结论：** 核心下载协议（thumb 18789 / download 18889 / 长按 Deep Link / `__LITTLEHELPER_GALLERY__`）已全部对齐。PDF 生成 + 混排画廊为下一步增量工作，不影响当前图片画廊功能。

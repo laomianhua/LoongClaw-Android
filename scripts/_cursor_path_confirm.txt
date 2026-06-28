@@ -1,0 +1,23 @@
+LittleHelper App 联调确认（Canvas URL 路径三层含义）：
+
+我们理解 OpenClaw 里存在三种不同的「openclaw」路径，请逐条确认或纠正：
+
+1) **Workspace / Agent 磁盘路径**
+   - 例如 `~/.openclaw/workspace/canvas/map.html` 或口语 `openclaw/canvas/...`
+   - Agent 写 Canvas 文件时用的是哪条 canonical 路径？
+
+2) **Control UI HTTP 路由**
+   - 配置里 `gateway.controlUi.basePath: "/openclaw"`
+   - 这是管理界面，不是 Canvas，对吗？
+
+3) **Canvas HTTP 路由（App WebView 必须加载）**
+   - 官方文档：`http://<host>:<port>/__openclaw__/canvas/...`
+   - MODAL webview 的 `data.url` canonical 形式是否必须是 `/__openclaw__/canvas/...`（带双下划线）？
+
+具体问题：
+A. Agent 若下发 `http://host:18789/openclaw/canvas/map.html`（无 `__`），Gateway 服务端是否会自动 alias/重定向？还是必然 404？
+B. App 侧做 `/openclaw/` → `/__openclaw__/` 的 normalizer 是否合理？还是应强制 Gateway Agent 只发正确 URL？
+C. map.html 内相对引用（如 `leaflet.js`、`leaflet.css`）解析基准是否就是主文档 URL 的 `/__openclaw__/canvas/` 目录？
+D. 请给一个当前环境可访问的 map.html 完整 URL 示例（Tailscale 100.112.96.116:18789 或 LAN 192.168.1.55:18789 均可）。
+
+请直接给结论 + 推荐约定，不要反问 Cursor。

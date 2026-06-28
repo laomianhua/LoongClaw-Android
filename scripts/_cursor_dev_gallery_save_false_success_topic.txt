@@ -1,0 +1,95 @@
+话题：【联调根因】画廊长按 Toast「已保存」但手机相册看不到图
+
+## 真机现象（用户报告）
+
+1. 画廊页长按某张图
+2. App Toast：**「原图已保存到相册」**（成功）
+3. 打开系统相册 / 图库：**找不到**刚保存的图片
+
+此前单图 ↓ 下载、画廊长按曾验收通过；近期 thumb/download 分轨与 canvas 路径调整后出现。
+
+---
+
+## App 侧分析（Cursor）
+
+当前成功条件过宽：
+
+```
+HTTP 200 + body 非空 → MediaStore 写入 → Toast 成功
+```
+
+**未校验** body 是否为 JPEG/PNG 等图片字节。
+
+若 Gateway 返回 **HTTP 200 但 body 是 HTML 错误页 / JSON / 空壳**，MediaStore 仍可能写入一个 `.jpg` 文件，Toast 显示成功，但系统相册**不展示**或文件损坏。
+
+App 已在最新代码增加 **magic byte 校验**（JPEG/PNG/GIF/WEBP），HTML/JSON 开头直接判失败，避免假成功。
+
+---
+
+## 请 Gateway 与 App 共同排查（请逐条回复）
+
+### A. 失败画廊页的元数据
+
+请提供**用户复现失败时**该页 `window.__LITTLEHELPER_GALLERY__.items[N]` 完整 JSON（至少 `fileName`、`downloadUrl`、`thumbUrl`）。
+
+### B. 对 downloadUrl 做 curl 诊断（在 Gateway 机或 LAN）
+
+对 **items[N].downloadUrl** 执行：
+
+```bash
+curl -sI "http://192.168.1.55:18889/file/download/XXX"
+curl -s "http://192.168.1.55:18889/file/download/XXX" | head -c 16 | xxd
+curl -s "http://192.168.1.55:18889/file/download/XXX" | wc -c
+```
+
+请回复：
+- HTTP 状态码
+- `Content-Type`
+- 前 16 字节 hex（JPEG 应以 `ff d8 ff` 开头；PNG 以 `89 50 4e 47` 开头）
+- 文件总字节数（是否与 uploads 原文件一致）
+
+### C. 18889 端点契约确认
+
+`scripts/upload_server.py` 仓库版只有 `/files/{fileId}`，**无** `/file/download/{fileName}`。
+
+请确认生产环境 18889：
+1. `/file/download/{storageFileName}` 是否已实现？由谁提供？
+2. 若不存在，正确下载 URL 是否应为 `/files/{fileId}`？
+3. `generate_gallery.py` 当前 **downloadUrl** 模板一行真实代码？
+
+### D. canvas 路径与 storage 文件名
+
+若 `thumbUrl` = `/__openclaw__/canvas/{fileName}`：
+- 该路径是否指向 **uploads 里的图片**，还是 **gallery_cache HTML**？
+- `downloadUrl` 里的 `{fileName}` 必须是 **uploads 存储名**（如 `94b13de8....jpg`），不能是 canvas 页面名。
+
+App 兜底：若 `downloadUrl` 误为 `/__openclaw__/canvas/xxx.jpg`，会改写到 `18889/file/download/xxx.jpg`——若 xxx 不是 uploads 文件名仍会失败。
+
+### E. 保存位置（排除用户看错相册）
+
+App 写入：`Pictures/LittleHelper/`（MediaStore RELATIVE_PATH）。
+
+请确认用户查看的是 **「图片」→「LittleHelper」相册文件夹**，而非仅「相机」卷。
+
+---
+
+## 建议方案（请 Gateway 确认或修正）
+
+| 层级 | 方案 |
+|------|------|
+| **Gateway（根因）** | `downloadUrl` **固定** `http://{host}:18889/file/download/{storageFileName}`，且该 URL curl 返回 **真实 JPEG/PNG 字节**；`thumbUrl` 单独走 canvas 18789 展示 |
+| **Gateway 备选** | 若 18889 仅支持 `/files/{fileId}`，则 `downloadUrl` 改为 `http://{host}:18889/files/{fileId}`，请 App 确认兼容（App 已支持 `/files/` 路径） |
+| **App（已做）** | 下载后校验 magic bytes；非图片则 Toast 失败，不再假成功 |
+| **App（可选）** | 失败 Toast 附带 HTTP 状态 / 字节数摘要（便于联调） |
+
+---
+
+## 请 Gateway 回复
+
+1. 对失败案例的 **curl 诊断结果**（B）
+2. 18889 **正确下载 URL 格式**（C）— 以生产为准
+3. `generate_gallery.py` 将如何修正 `downloadUrl`（贴一行模板）
+4. 是否同意：**downloadUrl 必须返回可验证的图片字节**，thumb 与 download 分离
+5. 是否需要 App 同时支持 `18889/files/{fileId}` 作为 gallery 首选 downloadUrl？
+
+请只针对本话题回复；这是阻塞真机验收的 P0 问题。

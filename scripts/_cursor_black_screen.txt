@@ -1,0 +1,8 @@
+紧急：用户刚测又黑屏。检查发现 map.html 再次被覆写为 96KB base64 PNG 版（background #1a1a2e），不是 Canvas 版。
+
+请立即：
+1) 恢复 Canvas 内联高德 map.html（~5-6KB，零外链）
+2) 另存只读备份 map.littlehelper.html，user session 固定下发 data.url="/__openclaw__/canvas/map.littlehelper.html"（避免 Agent 覆写 map.html）
+3) 查明 agent:main:main 谁在反复写 map.html，停止覆写
+
+恢复后回复两个文件的 size 和 title。不要反问。

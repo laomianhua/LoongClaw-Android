@@ -1,0 +1,54 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆愮‖绾︽潫 路 Gateway Canvas 绂佹鑷粯楂樺痉鎸夐挳銆?
+
+鐪熸満闂锛氶棶璺〉鍑虹幇椤堕儴銆岄珮寰峰鑸€?銆岀綉椤电増銆嶅弻鎸夐挳鈥斺€旇繖鏄?Gateway Agent 鍦?HTML 閲岃嚜缁樼殑锛岃繚鍙嶇害瀹氥€?
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+蹇呴』閬靛畧锛坅gent:main:main + 鎵€鏈夊啓 Canvas 鐨勫満鏅級
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+1. **绂佹**鍦?Canvas HTML 閲岀敾浠讳綍璺宠浆楂樺痉鐨勬寜閽?閾炬帴锛屽寘鎷絾涓嶉檺浜庯細
+   - 銆岄珮寰峰鑸€嶃€岀綉椤电増銆嶃€屽湪楂樺痉鏌ョ湅銆嶃€岀敤楂樺痉瀵艰埅銆?
+2. **绂佹**銆岀綉椤电増銆嶁€斺€旀湭瑁呴珮寰锋椂 App 鑷姩 H5 闄嶇骇锛屼笉闇€瑕?Gateway 鎻愪緵
+3. **绂佹**鎶婃寜閽斁鍦ㄥ湴鍥句笂鏂?鏍囬涓嬧€斺€斿敮涓€鎸夐挳鐢?App 娉ㄥ叆鍦?*椤甸潰搴曢儴**
+4. Gateway **鍙啓鏁版嵁**锛屼笉鍐欐寜閽細
+
+```javascript
+// 闂矾锛氬崕浜槈鍥?鈫?澶╁畨闂?
+window.__LITTLEHELPER_MAP__ = {
+  action: "route",
+  route: {
+    sLat: 39.9785, sLng: 116.3617, sName: "鍗庝涵鍢夊洯",
+    dLat: 39.9087, dLng: 116.3975, dName: "澶╁畨闂?,
+    t: "0"
+  }
+};
+```
+
+5. 鍦板浘鍖哄煙鍙礋璐ｏ細鏍囬銆佽矾绾挎憳瑕併€佸湴鍥剧粯鍒讹紙鐡︾墖/鎶樼嚎/marker锛?
+6. 鍐欏叆 MEMORY.md + skill锛氥€孡ittleHelper 鍦板浘 Canvas 绂佹鑷粯楂樺痉/缃戦〉鐗堟寜閽€?
+
+App 宸叉洿鏂帮細浼氳嚜鍔?*鍒犳帀**杩濊鐨勩€岀綉椤电増銆嶃€岄珮寰峰鑸€嶆寜閽紝骞跺湪搴曢儴娉ㄥ叆鍞竴銆岀敤楂樺痉鍦板浘鏌ョ湅銆嶃€?
+
+璇风‘璁ょ悊瑙ｏ紝骞舵鏌ユ渶杩戠敓鎴愮殑闂矾 Canvas 妯℃澘鏄惁宸插幓鎺夐《閮ㄥ弻鎸夐挳銆?
+
+鍕垮紑鏂拌瘽棰樸€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+纭鐞嗚В銆傚凡鍦ㄥ啓鍏ョ害鏉熴€?
+
+=== Dev session round complete ===

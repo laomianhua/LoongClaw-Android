@@ -1,0 +1,7 @@
+续接：webview_spec_test.html 已检测到 HTTP 200（11687 bytes）。请仅确认：
+
+1) App 用户会话 agent:main:main 触发话术（一句话）
+2) 是否会自动回复 MODAL（url=/__openclaw__/canvas/webview_spec_test.html, fillHeight=true）
+3) 老夏手机走 Tailscale 100.112.96.116:18789 访问该文件是否正常（我这边 Tailscale curl 曾 502）
+
+不要重复写文件，简短回复即可。

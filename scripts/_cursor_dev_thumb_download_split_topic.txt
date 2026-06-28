@@ -1,0 +1,57 @@
+话题：确认画廊 thumbUrl / downloadUrl 分轨方案（请 Gateway 写入契约并执行）
+
+## 背景
+
+上一轮协议对齐（`_cursor_dev_protocol_align`）中，你方提出：
+
+- `thumbUrl` → Gateway 主端口 **18789** 同源（WebView 展示，经真机验证最稳）
+- `downloadUrl` → **18889** `/file/download/...`（App 原生长按下载，已验收）
+
+App 侧（Cursor）综合架构原则与真机效果，**正式确认采用该分轨方案**，无需 App 改代码。
+
+---
+
+## App 侧确认（权威）
+
+### 原则：谁消费、谁定 URL
+
+| 字段 | 消费者 | 推荐 URL |
+|------|--------|----------|
+| `thumbUrl` | 画廊 HTML 内 `<img>`（WebView） | **18789 同源**路径（以你们真机验证为准，如 `/__openclaw__/file/download/{fileName}` 或 canvas 同源路径） |
+| `downloadUrl` | App 原生 OkHttp（长按 `littlehelper://gallery/download?index=N`） | **`http://{host}:18889/file/download/{fileName}`** |
+
+**不要**要求 thumb 与 download 共用 18889——WebView 缩略图已证明易失败；App 下载本就走 18889，分开更稳。
+
+### App 行为（供写入 skill/MEMORY）
+
+- App **只读** `items[N].downloadUrl` 做下载，**不解析** `thumbUrl`
+- WebView 子资源 18789 同源时 App 自动注入 Bearer；18889 下载不带 Bearer（与 upload 服务一致）
+- 单图 `__LITTLEHELPER_IMAGE__.downloadUrl` 仍可用 18789 `/__openclaw__/file/download/...` **或** 18889（两种均已验收）
+
+### 画廊 v2 items 推荐模板
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "相册名",
+  items: [{
+    fileId: "...",
+    fileName: "storage文件名.jpg",
+    displayName: "展示名",
+    mimeType: "image/jpeg",
+    thumbUrl: "/__openclaw__/file/download/{fileName}",   // 18789，WebView 展示
+    downloadUrl: "http://" + location.hostname + ":18889/file/download/" + encodeURIComponent(fileName)
+  }]
+};
+```
+
+（`thumbUrl` 具体路径若你们 canvas 同源更稳，可沿用当前 `generate_gallery.py` 生产配置，**不必强行与 downloadUrl 同端口**。）
+
+---
+
+## 请 Gateway 执行
+
+1. 将 **thumb 18789 / download 18889 分轨** 写入 `MEMORY.md`、`littlehelper-modal` skill，并作为 `generate_gallery.py` 固定行为
+2. 确认上一轮协议对齐全文（wire / MODAL / 画廊 v2 长按 / 地图 / 废弃 v1）已同步到 MEMORY
+3. 回复：已更新哪些文件；是否还有与 App 冲突项
+
+请只针对本话题回复。

@@ -6,7 +6,14 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
-import kotlinx.coroutines.*
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -26,6 +33,8 @@ class AudioRecorderManager(private val context: Context) {
 
     var onStateChanged: ((State) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
+    /** 录音过程中推送 PCM 块（16kHz mono 16-bit），供流式 ASR 使用。 */
+    var onPcmChunk: ((ByteArray) -> Unit)? = null
 
     private var audioRecord: AudioRecord? = null
     private var outputFile: File? = null
@@ -90,6 +99,7 @@ class AudioRecorderManager(private val context: Context) {
                     if (read > 0) {
                         os.write(data, 0, read)
                         totalAudioLen += read
+                        onPcmChunk?.invoke(data.copyOf(read))
                     }
                 }
             }
@@ -179,7 +189,17 @@ class AudioRecorderManager(private val context: Context) {
         if (state != State.RECORDING) {
             return outputFile?.takeIf { it.exists() && it.length() > 44 }
         }
+        return runBlocking {
+            stopInternal()
+        }
+    }
 
+    /** 在协程中调用，避免主线程阻塞导致 ANR。 */
+    suspend fun stopAsync(): File? = withContext(Dispatchers.IO) {
+        stopInternal()
+    }
+
+    private suspend fun stopInternal(): File? {
         try {
             setState(State.FINISHED)
             audioRecord?.stop()
@@ -187,9 +207,7 @@ class AudioRecorderManager(private val context: Context) {
             Log.e(TAG, "stop failed", e)
         }
 
-        runBlocking {
-            recordingJob?.join()
-        }
+        recordingJob?.join()
 
         releaseRecorder()
 
@@ -200,10 +218,9 @@ class AudioRecorderManager(private val context: Context) {
             setState(State.IDLE)
             onError?.invoke("没有录到声音，请按住按钮重新说一遍")
             return null
-        } else {
-            Log.i(TAG, "stop ok → ${file.length()} bytes")
-            return file
         }
+        Log.i(TAG, "stop ok → ${file.length()} bytes")
+        return file
     }
 
     fun cancel() {
@@ -230,6 +247,7 @@ class AudioRecorderManager(private val context: Context) {
     private fun cleanup(deleteFile: Boolean) {
         recordingJob?.cancel()
         releaseRecorder()
+        onPcmChunk = null
         if (deleteFile) {
             outputFile?.delete()
             outputFile = null

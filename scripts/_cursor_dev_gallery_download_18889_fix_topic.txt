@@ -1,0 +1,41 @@
+话题：【紧急】画廊 downloadUrl 必须改回 18889 — canvas 路径导致 App 长按保存失败
+
+## 现象
+
+真机：画廊长按保存失败。根因是上一轮分轨后 `generate_gallery.py` 将资源指向 **canvas 路径**（18789 `/__openclaw__/canvas/{fileName}`），不适合 App 原生下载。
+
+## App 侧要求（不可协商）
+
+`window.__LITTLEHELPER_GALLERY__.items[]` 中：
+
+| 字段 | 必须 |
+|------|------|
+| **`downloadUrl`** | `http://{location.hostname}:18889/file/download/{storageFileName}` |
+| `thumbUrl` | 可继续用 canvas 18789 展示，**也可**与 download 同为 18889（若 WebView 能加载）；**但 downloadUrl 必须是 18889** |
+
+App 长按流程：
+1. 拦截 `littlehelper://gallery/download?index=N`
+2. 读取 `items[N].downloadUrl`（**仅此字段**）
+3. OkHttp GET → 写入相册
+
+若 `downloadUrl` 为 `/__openclaw__/canvas/...` 或 18789 非 file/download 路径，GET 到的不是原图字节，保存失败。
+
+## 请立即修改 `generate_gallery.py`
+
+```javascript
+downloadUrl: "http://" + location.hostname + ":18889/file/download/" + encodeURIComponent(fileName)
+```
+
+**禁止**把 `downloadUrl` 设为：
+- `/__openclaw__/canvas/{fileName}`
+- 任何非 18889 的展示用路径
+
+`thumbUrl` 与 `downloadUrl` **必须分离**；即使 thumb 走 canvas，**download 仍走 18889**。
+
+## 请回复
+
+1. 已改回 `downloadUrl` → 18889 的确认
+2. 当前 `generate_gallery.py` 中 thumbUrl / downloadUrl 各一行示例
+3. 是否需要 App 侧改动？（预期：**不需要**，只要 downloadUrl 正确）
+
+请只针对本话题回复。

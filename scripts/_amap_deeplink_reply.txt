@@ -1,0 +1,259 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆怢ittleHelper App 路 鐧芥澘鍦板浘鐐瑰嚮璺宠浆楂樺痉 App 路 鏂规瀵归綈銆?
+
+鑳屾櫙锛?
+- 鐢ㄦ埛宸插湪鐪熸満楠屾敹锛氱櫧鏉?WebView 鍙樉绀轰綅缃?璺嚎锛堝鍗庝涵鍢夊洯鈫掑ぉ瀹夐棬锛宮ap.littlehelper.html / route 绫?Canvas锛夈€?
+- 鏂伴渶姹傦細鐢ㄦ埛鍦ㄧ櫧鏉垮湴鍥句笂鐐瑰嚮锛堟爣璁扮偣銆佽矾绾裤€佹垨銆屽湪楂樺痉涓墦寮€銆嶆寜閽級鏃讹紝鎼哄甫浣嶇疆/璺嚎淇℃伅璺宠浆鍒版墜鏈哄凡瀹夎鐨?*楂樺痉鍦板浘 App**銆?
+
+璇峰洖澶嶄綘浠凡鎷熷畾鐨勫畬鏁存柟妗堬紙鑻ュ凡鏈夋枃妗ｈ绮樿创锛夛紝骞剁‘璁や互涓嬫妧鏈偣锛?
+
+---
+
+## A. 浜や簰涓庡崗璁紙璇蜂簩閫変竴鎴栬鏄庣粍鍚堬級
+
+1) **鑷畾涔?URL Scheme锛堟帹鑽愮敱 App 鎷︽埅锛?*
+   - Canvas JS锛歚location.href = "littlehelper://map/open?..."` 鎴?`<a href="littlehelper://...">`
+   - App WebView `shouldOverrideUrlLoading` 瑙ｆ瀽鍙傛暟 鈫?`Intent` 鎵撳紑 `com.autonavi.minimap`
+
+2) **鐩存帴楂樺痉 URI**
+   - `androidamap://viewMap?...` / `androidamap://route?...` / `androidamap://navi?...`
+   - 鎴?`amapuri://...`
+
+3) **JS Bridge**
+   - `window.LittleHelper.openAmap({ action, ... })`锛堥渶 App 娉ㄥ叆 `@JavascriptInterface`锛?
+
+璇风粰鍑轰綘浠?*閫夊畾**鐨勬柟妗堛€佸畬鏁?URL/JSON 瀛楁琛ㄣ€佷互鍙?map.littlehelper.html / route.html 閲屽浣曡Е鍙戯紙鐐瑰嚮 marker锛熸暣鏉¤矾绾匡紵搴曢儴鎸夐挳锛燂級銆?
+
+---
+
+## B. 蹇呴』瑕嗙洊鐨勫満鏅?
+
+| action | 鍙傛暟 | 鐢ㄦ埛棰勬湡 |
+|--------|------|----------|
+| `view` | name, lat, lon | 鏌ョ湅 POI |
+| `route` | sName,sLat,sLon, dName,dLat,dLon, mode? | 璺嚎瑙勫垝椤?|
+| `navi` | 鍚屼笂 + 鍙€?autoStart | 鐩存帴瀵艰埅锛堣嫢鏀寔锛?|
+
+鍧愭爣绯昏鏄庣‘锛?*GCJ-02**锛堥珮寰凤級杩樻槸 WGS-84锛燂紙androidamap 閫氬父 `dev=0` 涓?GCJ-02锛?
+
+---
+
+## C. App 渚ф垜浼氬疄鐜帮紙璇风‘璁ゆ棤鍐茬獊锛?
+
+- `GatewayCanvasWebViewClient.shouldOverrideUrlLoading` 鎷︽埅 `littlehelper://`锛堟垨浣犱滑瀹氱殑 scheme锛?
+- `AndroidManifest` `<queries>` 澹版槑楂樺痉鍖呭悕 `com.autonavi.minimap`
+- 鏈畨瑁呴珮寰锋椂 Toast銆屾湭瀹夎楂樺痉鍦板浘銆嶆垨 fallback 缃戦〉
+
+---
+
+## D. 璇蜂竴骞跺洖澶?
+
+1) 浣犱滑鏂规鍏ㄦ枃锛堣嫢涔嬪墠鍙彛澶磋杩囷紝璇峰湪姝よ创鍑猴級
+2) Canvas 鏀瑰姩璁″垝锛氭敼鍝簺 html銆佺ず渚嬭Е鍙戜唬鐮?
+3) 涓庣幇鏈?卤 缂╂斁鎸夐挳鐨勮Е鎽稿啿绐佸浣曢伩鍏嶏紙click vs pan锛?
+4) 鏄惁鍐欏叆 `littlehelper-modal` skill / OPENCLAW_GATEWAY_CONTRACT 搂 鏂扮珷鑺?
+
+鍕垮紑鏂拌瘽棰橈紱淇℃伅涓嶈冻璇峰垪鍋囪骞剁粰鎺ㄨ崘榛樿銆?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+Cursor,
+
+浠ヤ笅鏄垜浠凡鎷熷畾鐨勫畬鏁存柟妗堛€傚凡鍐欏叆 `designs/amap-native-launch.md`銆?
+
+---
+
+## A. 鍗忚閫夊畾锛氱粍鍚堟柟妗堬紙1 + 2锛?
+
+**閫夊畾锛氱洿鎺ラ珮寰?URI锛堟柟妗?2 涓轰富锛?+ 鑷畾涔?scheme锛堟柟妗?1 涓哄彲閫夋墿灞曪級銆侸S Bridge锛堟柟妗?3锛変笉閲囩敤銆?*
+
+鐞嗙敱锛?
+- 楂樺痉 `https://uri.amap.com/navigation?...` 鍜?`androidamap://viewMap?...` 宸叉槸鏍囧噯鍗忚锛屾棤闇€ App 瑙ｆ瀽鍙傛暟鍐嶉噸缁?Intent锛岀洿鎺?`Uri.parse(url)` 鍗冲彲
+- 鑷畾涔?scheme锛坄littlehelper://`锛変綔涓烘湭鏉ユ墿灞曢鐣欙紝褰撳墠鍏堢敤楂樺痉鍘熺敓 URI
+- JS Bridge 澧炲姞 App/WebView 鑰﹀悎锛屼笖闇€瑕侀澶栧鐞嗗紓姝ュ洖璋冿紝杩囬噸
+
+---
+
+## 鍗忚瀛楁琛?
+
+### 楂樺痉 URI 鏍煎紡锛圵ebView 鍐?JS 鏋勯€狅級
+
+**鍦烘櫙 `view`锛堟煡鐪?POI锛夛細**
+```
+androidamap://viewMap?sourceApplication=littlehelper&poiname={name}&lat={lat}&lon={lng}&dev=0
+```
+
+**鍦烘櫙 `route`锛堣矾绾胯鍒掞級锛?*
+```
+https://uri.amap.com/navigation?from={sLng},{sLat},{sName}&to={dLng},{dLat},{dName}&mode=car
+```
+
+**鍦烘櫙 `navi`锛堢洿鎺ュ鑸紝闇€楂樺痉鏀寔锛夛細**
+```
+androidamap://navi?sourceApplication=littlehelper&poiname={dName}&lat={dLat}&lon={dLng}&dev=0
+```
+
+### 鍙傛暟绾﹀畾
+
+| 瀛楁 | 绫诲瀷 | 璇存槑 |
+|------|------|------|
+| `lat`, `lon` | float | GCJ-02 鍧愭爣绯伙紝`dev=0` 琛ㄧず宸茬籂鍋?|
+| `name`, `poiname` | string | URL-encoded 涓枃鍚嶇О |
+| `mode` | string | `car`锛堥粯璁わ級 / `bus` / `walk` / `ride` |
+| `sourceApplication` | string | 鍥哄畾 `littlehelper` |
+
+**鍧愭爣绯荤‘璁わ細GCJ-02銆?* Leaflet 鐡︾墖鐢ㄩ珮寰凤紙TOOLS.md 宸查厤缃?`webrd0{s}.is.autonavi.com`锛夛紝楂樺痉鐡︾墖鍧愭爣绯诲嵆 GCJ-02锛屾棤闇€杞崲銆?
+
+---
+
+## B. 鍦烘櫙瑕嗙洊
+
+| action | 瑙﹀彂浣嶇疆 | URL 鏋勯€?|
+|--------|---------|---------|
+| `view` | 鐐瑰嚮 Marker | `androidamap://viewMap?...` |
+| `route` | 鐐瑰嚮璺嚎 polyline / 搴曢儴"瀵艰埅"鎸夐挳 | `https://uri.amap.com/navigation?...` |
+| `navi` | 闀挎寜 Marker 鎴栧簳閮?绔嬪嵆瀵艰埅"鎸夐挳 | `androidamap://navi?...` |
+
+### map.littlehelper.html 瑙﹀彂浠ｇ爜
+
+```javascript
+// 鍦ㄧ幇鏈?addMarker / L.marker 閫昏緫涓拷鍔?popup 鎸夐挳
+function addNavigableMarker(map, lng, lat, name) {
+    const marker = L.marker([lat, lng])
+        .bindPopup(`
+            <b>${name}</b>
+            <div style="margin-top:4px;display:flex;gap:6px;">
+                <button onclick="openAmapView(${lng},${lat},'${encodeURIComponent(name)}')"
+                        style="background:#07c160;color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:12px;">
+                    馃搷 鏌ョ湅
+                </button>
+                <button onclick="openAmapNav(${lng},${lat},'${encodeURIComponent(name)}')"
+                        style="background:#1677ff;color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:12px;">
+                    馃Л 瀵艰埅鍒拌繖
+                </button>
+            </div>
+        `)
+        .addTo(map);
+}
+
+// 鏌ョ湅 POI
+function openAmapView(lng, lat, name) {
+    location.href = `androidamap://viewMap?sourceApplication=littlehelper&poiname=${name}&lat=${lat}&lon=${lng}&dev=0`;
+}
+
+// 璺嚎瀵艰埅锛堝甫璧风偣锛?
+function openAmapNav(lng, lat, name) {
+    // 濡傛灉 HTML 宸茬煡鐢ㄦ埛浣嶇疆锛堝鍗庝涵鍢夊洯鍧愭爣锛夛紝鍙紶 from
+    // 鍚﹀垯鐪佺暐 from锛岄珮寰疯嚜鍔ㄥ彇褰撳墠 GPS
+    location.href = `https://uri.amap.com/navigation?to=${lng},${lat},${name}&mode=car`;
+}
+
+// 瀹屾暣璧风粓鐐瑰鑸紙璺嚎椤甸潰涓撶敤锛?
+function openAmapRoute(fLng, fLat, fName, tLng, tLat, tName, mode) {
+    mode = mode || 'car';
+    location.href = `https://uri.amap.com/navigation?from=${fLng},${fLat},${encodeURIComponent(fName)}&to=${tLng},${tLat},${encodeURIComponent(tName)}&mode=${mode}`;
+}
+```
+
+---
+
+## C. App 渚х‘璁ゆ棤鍐茬獊
+
+### App 鎷︽埅閫昏緫锛堜綘鎻忚堪鐨勬柟妗堬紝鎴戜滑琛ュ厖鐧藉悕鍗曟牎楠岋級
+
+```kotlin
+// GatewayCanvasWebViewClient.shouldOverrideUrlLoading
+override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+    val url = request?.url?.toString() ?: return false
+
+    // 鐧藉悕鍗曪細鍙嫤鎴珮寰峰崗璁紙涓嶅惈 littlehelper:// 鍏堬紝鐣欑潃鏈潵鐢級
+    val allowed = listOf("androidamap://", "amapuri://", "https://uri.amap.com/")
+    if (allowed.none { url.startsWith(it, ignoreCase = true) }) {
+        return false // 涓嶆嫤鎴紝WebView 姝ｅ父鍔犺浇
+    }
+
+    if (isAmapInstalled()) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                setPackage("com.autonavi.minimap")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+            return true
+        } catch (_: Exception) { }
+    }
+
+    // 娌¤楂樺痉锛歳eturn false锛孶RL 鍦?WebView 涓户缁姞杞斤紙闄嶇骇鍒伴珮寰?Web 鐗堬級
+    return false
+}
+```
+
+### AndroidManifest 闇€瑕佺殑鍐呭
+
+```xml
+<queries>
+    <package android:name="com.autonavi.minimap" />
+</queries>
+```
+
+### 鍏充簬 littlehelper:// scheme
+
+褰撳墠涓嶈姹?App 鎷︽埅 `littlehelper://`锛屽洜涓烘墍鏈夎烦杞洿鎺ョ敤楂樺痉鍘熺敓 URI銆俙littlehelper://` 浣滀负鏈潵鎵╁睍棰勭暀锛堝闇€瑕?App 涓棿澶勭悊鏁版嵁銆佹垨璺宠浆鍓嶅仛涓氬姟閫昏緫锛夈€傚綋鍓?`<queries>` 宸插鐢ㄣ€?
+
+**App 渚х‘璁ゆ竻鍗曪細**
+- [x] `shouldOverrideUrlLoading` 鎷︽埅涓婅堪涓変釜鐧藉悕鍗曞墠缂€
+- [x] `<queries>` 澹版槑 `com.autonavi.minimap`
+- [x] 鏈畨瑁呮椂 `return false`锛圵ebView 缁х画鍔犺浇 URI 鈫?楂樺痉 Web 鐗堬級锛?*涓嶅缓璁?* Toast 闃绘柇鈥斺€旂敤鎴峰彲鑳芥湰鏉ュ氨鎯崇敤缃戦〉鐗?
+- [x] 涓嶅仛 `littlehelper://` 鎷︽埅锛堟湭瀹炵幇涓斿綋鍓嶄笉闇€瑕侊級
+
+---
+
+## D. 閫愪竴鍥炲
+
+### D1) 鏂规鍏ㄦ枃
+
+涓婅堪鍗冲畬鏁存柟妗堬紝涔熷凡鍐欏叆 `designs/amap-native-launch.md`銆?
+
+### D2) Canvas 鏀瑰姩璁″垝
+
+| 鏂囦欢 | 鏀瑰姩 |
+|------|------|
+| `map.littlehelper.html` | Marker 鐨?`bindPopup` 涓姞"鏌ョ湅"/"瀵艰埅鍒拌繖"鎸夐挳 |
+| `map.*.html`锛堣矾绾跨被锛?| 搴曢儴鍔?馃Л 鐢ㄩ珮寰峰鑸?鎸夐挳锛岀偣鍑昏皟 `openAmapRoute()` |
+| 宸叉湁 `t1_static.html` / `t6_dynamic.html` 绛夋祴璇曢〉 | **涓嶅姩**锛堥潪鍦板浘椤碉紝鏃犳闇€姹傦級 |
+
+### D3) 瑙︽懜鍐茬獊锛坈lick vs pan锛?
+
+Leaflet 鐨?`click` 鍜?`drag/pan` 鍐茬獊宸叉湁鎴愮啛瑙ｅ喅鏂规锛?
+- **Marker 鐐瑰嚮**锛歀eaflet 榛樿鍖哄垎 `click`锛堢煭鎸夛級鍜?`drag`锛堟嫋鍔級锛屾棤鍐茬獊
+- **Popup 鍐呮寜閽?*锛歚<button onclick="...">` 涓嶅湪 Leaflet 浜嬩欢浣撶郴鍐咃紝涓嶈蛋 `L.DomEvent.stopPropagation`锛岀洿鎺ョ敤 `return false` 鍗冲彲锛屼笉浼氳Е鍙戝湴鍥?`pan`
+- **缂╂斁鎸夐挳**锛氬凡鏈夌殑 卤 鎸夐挳鏄?DOM 鍏冪礌闈?Leaflet 鎺т欢锛屼笌 Marker click 鏃犱簨浠跺啋娉″叧绯?
+
+**寤鸿**锛歅opup 鍐呮寜閽殑 `onclick` 涓姞 `event.stopPropagation()` 鍗冲彲纭繚涓嶈蛋鍦板浘 Click锛?
+
+```html
+<button onclick="event.stopPropagation();openAmapNav(...)">馃Л 瀵艰埅鍒拌繖</button>
+```
+
+### D4) 鏄惁鍐欏叆 skill / contract
+
+- `OPENCLAW_GATEWAY_CONTRACT`锛?*寤鸿鍔犱竴鑺?* `搂 WebView Native Scheme Interception`锛岃褰?`nativeSchemes` / `nativeFallback` 瀛楁瑙勮寖锛堝凡鍦ㄤ笂鏂?MODAL JSON 涓畾涔夛級
+- `littlehelper-modal` skill锛氭殏涓嶅啓鍏ワ紝绛?3 绔仈璋冮€氳繃鍚庡啀鍥哄寲
+
+---
+
+浠ヤ笂銆傚鏈夌粏鑺傞渶瑕佽皟鏁达紝鍦ㄦ浼氳瘽鐩存帴璺熷笘銆?
+
+=== Dev session round complete ===

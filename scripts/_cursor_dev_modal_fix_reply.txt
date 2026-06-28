@@ -1,0 +1,52 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+缁帴 路 鑰佸鐪熸満鏁呴殰锛氳銆屾墦寮€ WebView 鑳藉姏娴嬭瘯銆嶅悗鑱婂ぉ鏈夊洖澶嶏紝浣嗙櫧鏉挎墜鍔ㄥ睍寮€鍙樉绀恒€岀瓑寰?OpenClaw 鎸囦护銆嶏紝璇存槑 App 鏈敹鍒板彲瑙ｆ瀽鐨?MODAL銆?
+
+鎴戠敤 probe 妯℃嫙 agent:main:main 鍙戝悓涓€鍙ヨ瘽锛屼綘鏂瑰疄闄呭洖澶嶆槸锛?
+- CHAT: 銆學ebView 鑳藉姏娴嬭瘯椤甸潰锛屽姞杞界湅鐪嬶紵銆?
+- MODAL 鍦?text 鍧楅噷锛屼絾鏈変袱澶勯敊璇細
+  1) url 鐢ㄤ簡缁濆鍦板潃 `http://100.112.96.116:18789/...`锛堝簲鐩稿璺緞 `/__openclaw__/canvas/webview_spec_test.html`锛岀敱 App 鎷?gatewayBaseUrl锛?
+  2) data 鍙湁 `height:600`锛岀己灏?`fillHeight:true` 鍜?`scrollable:false`
+
+璇风珛鍗充慨姝?user-session Agent 瑙勫垯锛屾瘡娆¤Е鍙戝繀椤诲洖澶嶅畬鏁?wire锛堝惈 ===END===锛夛細
+
+===CHAT===
+宸叉墦寮€ WebView 鑳藉姏娴嬭瘯椤点€?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "webview-spec",
+    "type": "webview",
+    "title": "WebView 鑳藉姏娴嬭瘯",
+    "data": {
+      "url": "/__openclaw__/canvas/webview_spec_test.html",
+      "scrollable": false,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+
+绂佹鍙洖澶嶃€屾墦寮€webview鑳藉姏娴嬭瘯椤甸潰銆嶇瓑绾枃瀛椾笉甯?MODAL JSON銆?
+
+璇风‘璁わ細1) 宸叉洿鏂?Agent 鎸囦护锛?) 鑰佸鍐嶈瘯涓€娆″簲鑷姩寮圭櫧鏉裤€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+闂瀹氫綅锛氫富浼氳瘽 agent 涓嶇煡閬撹Е鍙?WebView 鑳藉姏娴嬭瘯鏃跺簲鍥炲浠€涔堟牸寮忋€傛垜鏉ュ啓鍏ヨ鍒欍€?
+
+=== Dev session round complete ===

@@ -1,0 +1,30 @@
+话题：LittleHelper App「用户图片保存 + 回传下载」Gateway 契约对齐
+
+## 背景（用户真实场景）
+- 用户通过小龙虾（Agent）把**图片**存到 Gateway 侧（不是图标/UI asset）。
+- 需要时用户让 Agent **调出来**，App 在白板（MODAL）展示。
+- 用户在 App 里希望 **一键把原图保存到手机相册**（不是白板截图、不是可见区域截屏）。
+- 图片可能很大，白板 WebView 里需要上下滑动才能看全；保存时应拿**源文件**，与是否滚动无关。
+
+## App 侧已有能力（供对齐）
+- 上传：App → `http://{GATEWAY_HOST}:18889/upload`，消息里 `[upload:{fileId}:{fileName}]`（`scripts/upload_server.py`）
+- 白板：MODAL `===CHAT===/===MODAL===/===END===`，块类型 webview / table / markdown / chart/line
+- 白板截图存相册（PixelCopy 可见区域）已实现，但**不满足**本需求
+- 契约文档：`docs/OPENCLAW_GATEWAY_CONTRACT.md`
+
+## 目标（请 Gateway/Skill 侧确认或提案）
+1. **存图**：Agent 帮用户保存图片时，落盘路径与标识规则（是否复用 `~/.openclaw/uploads/{fileId}_{fileName}`？还是独立 `images/` 目录？metadata 存哪？）
+2. **调出展示**：MODAL 下发格式——推荐可机器解析，例如：
+   - 新增 `type: image` block（`fileId` / `url` / `fileName` / `mimeType`），或
+   - webview Canvas 约定 `window.__LITTLEHELPER_IMAGE__ = { fileId, fileName, downloadUrl }`
+3. **App 下载原图**：HTTP GET 端点（是否复用 `:18889/files/{fileId}` 或 Gateway 主端口？鉴权方式？）
+4. **与上传对称**：用户→Agent 用 upload 标记；Agent→用户 回传图片的 wire 格式建议（是否也需要 chat 标记如 `[image:{fileId}:{fileName}]` 还是仅 MODAL block？）
+
+## 请回复（可执行、尽量具体）
+1. 推荐的 **MODAL JSON 示例**（用户说「把我上周存的那张发票找出来」后，Gateway 下发的一帧完整 MODAL）
+2. **下载 URL** 规则与示例（含 host/port/path、是否需要 token/header）
+3. Agent/skill 存图时的 **fileId 生成与索引** 方案（用户如何用自然语言检索）
+4. 若短期不能新 block，**最小改动** 的 webview/HTML 约定是什么？
+5. 是否需要更新 `workspace/skills/littlehelper-modal/SKILL.md` 与 `OPENCLAW_GATEWAY_CONTRACT.md`——若需要，请给出 § 章节标题与要点清单
+
+请只针对本话题回复，不要开启新话题。信息不足时列出假设并给推荐方案。

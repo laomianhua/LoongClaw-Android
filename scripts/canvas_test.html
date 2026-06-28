@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>Test</title>
+<style>
+body{background:#1a1a2e;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif}
+h1{color:#ff4757;font-size:3rem;margin:0}
+p{color:#aaa;font-size:1.2rem;margin-top:1rem}
+</style>
+</head>
+<body>
+<h1>🎯</h1>
+<h1>白板 WebView OK!</h1>
+<p>如果你看到这个页面，说明 token 认证通了</p>
+
+<script>
+(() => {
+  // Cross-platform action bridge helper.
+  // Works on:
+  // - iOS: window.webkit.messageHandlers.openclawCanvasA2UIAction.postMessage(...)
+  // - Android: window.openclawCanvasA2UIAction.postMessage(...)
+  const handlerNames = ["openclawCanvasA2UIAction"];
+  function postToNode(payload) {
+    try {
+      const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
+      for (const name of handlerNames) {
+        const iosHandler = globalThis.webkit?.messageHandlers?.[name];
+        if (iosHandler && typeof iosHandler.postMessage === "function") {
+          iosHandler.postMessage(raw);
+          return true;
+        }
+        const androidHandler = globalThis[name];
+        if (androidHandler && typeof androidHandler.postMessage === "function") {
+          // Important: call as a method on the interface object (binding matters on Android WebView).
+          androidHandler.postMessage(raw);
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
+  function sendUserAction(userAction) {
+    const id =
+      (userAction && typeof userAction.id === "string" && userAction.id.trim()) ||
+      (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
+    const action = { ...userAction, id };
+    return postToNode({ userAction: action });
+  }
+  globalThis.OpenClaw = globalThis.OpenClaw ?? {};
+  globalThis.OpenClaw.postMessage = postToNode;
+  globalThis.OpenClaw.sendUserAction = sendUserAction;
+  globalThis.openclawPostMessage = postToNode;
+  globalThis.openclawSendUserAction = sendUserAction;
+
+  try {
+    const cap = new URLSearchParams(location.search).get("oc_cap");
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const capQuery = cap ? "?oc_cap=" + encodeURIComponent(cap) : "";
+    const ws = new WebSocket(proto + "://" + location.host + "/__openclaw__/ws" + capQuery);
+    ws.onmessage = (ev) => {
+      if (String(ev.data || "") === "reload") location.reload();
+    };
+  } catch {}
+})();
+</script>
+</body>
+</html>

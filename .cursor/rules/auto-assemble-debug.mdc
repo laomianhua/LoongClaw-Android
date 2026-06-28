@@ -1,0 +1,36 @@
+---
+description: 改 App 代码后自动 gradlew assembleDebug，用户不用 Android Studio
+alwaysApply: true
+---
+
+# 改完代码自动编译 Debug APK
+
+用户不使用 Android Studio，依赖 Agent 编译安装包。
+
+## 何时编译
+
+完成 **App 相关** 改动（Kotlin/Java、`res/`、`AndroidManifest.xml`、`build.gradle.kts` 等）后，**在同一轮对话里自动执行**：
+
+```powershell
+cd d:\Dev\LittleHelper; .\gradlew assembleDebug
+```
+
+无需用户再提醒「请编译」。
+
+## 编译前
+
+1. 若涉及 launcher / 图标 XML，先按 `android-launcher-xml.mdc` 检查 `<?xml` 必须在第一行。
+2. 若 `assembleDebug` 失败，先修错再重编，不要只告诉用户去 Studio 里点 Run。
+
+## 编译后
+
+- 成功：简短告知 APK 路径：`app\build\outputs\apk\debug\app-debug.apk`
+- 失败：贴关键错误并继续修复，直到通过或明确阻塞
+
+## 不必编译
+
+- 仅改 `scripts/*.py`、`docs/`、`README.md` 且未动 App 源码时，可不跑 Gradle（除非用户要求）。
+
+## 安装
+
+用户未明确要求时 **不要** 自动 `adb install`；只编译 APK。若用户说「装到手机」，再执行 install。

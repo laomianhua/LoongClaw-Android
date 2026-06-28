@@ -1,0 +1,187 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+璇濋锛歀ittleHelper App銆岀敤鎴峰浘鐗囦繚瀛?+ 鍥炰紶涓嬭浇銆岹ateway 濂戠害瀵归綈
+
+## 鑳屾櫙锛堢敤鎴风湡瀹炲満鏅級
+- 鐢ㄦ埛閫氳繃灏忛緳铏撅紙Agent锛夋妸**鍥剧墖**瀛樺埌 Gateway 渚э紙涓嶆槸鍥炬爣/UI asset锛夈€?
+- 闇€瑕佹椂鐢ㄦ埛璁?Agent **璋冨嚭鏉?*锛孉pp 鍦ㄧ櫧鏉匡紙MODAL锛夊睍绀恒€?
+- 鐢ㄦ埛鍦?App 閲屽笇鏈?**涓€閿妸鍘熷浘淇濆瓨鍒版墜鏈虹浉鍐?*锛堜笉鏄櫧鏉挎埅鍥俱€佷笉鏄彲瑙佸尯鍩熸埅灞忥級銆?
+- 鍥剧墖鍙兘寰堝ぇ锛岀櫧鏉?WebView 閲岄渶瑕佷笂涓嬫粦鍔ㄦ墠鑳界湅鍏紱淇濆瓨鏃跺簲鎷?*婧愭枃浠?*锛屼笌鏄惁婊氬姩鏃犲叧銆?
+
+## App 渚у凡鏈夎兘鍔涳紙渚涘榻愶級
+- 涓婁紶锛欰pp 鈫?`http://{GATEWAY_HOST}:18889/upload`锛屾秷鎭噷 `[upload:{fileId}:{fileName}]`锛坄scripts/upload_server.py`锛?
+- 鐧芥澘锛歁ODAL `===CHAT===/===MODAL===/===END===`锛屽潡绫诲瀷 webview / table / markdown / chart/line
+- 鐧芥澘鎴浘瀛樼浉鍐岋紙PixelCopy 鍙鍖哄煙锛夊凡瀹炵幇锛屼絾**涓嶆弧瓒?*鏈渶姹?
+- 濂戠害鏂囨。锛歚docs/OPENCLAW_GATEWAY_CONTRACT.md`
+
+## 鐩爣锛堣 Gateway/Skill 渚х‘璁ゆ垨鎻愭锛?
+1. **瀛樺浘**锛欰gent 甯敤鎴蜂繚瀛樺浘鐗囨椂锛岃惤鐩樿矾寰勪笌鏍囪瘑瑙勫垯锛堟槸鍚﹀鐢?`~/.openclaw/uploads/{fileId}_{fileName}`锛熻繕鏄嫭绔?`images/` 鐩綍锛焟etadata 瀛樺摢锛燂級
+2. **璋冨嚭灞曠ず**锛歁ODAL 涓嬪彂鏍煎紡鈥斺€旀帹鑽愬彲鏈哄櫒瑙ｆ瀽锛屼緥濡傦細
+   - 鏂板 `type: image` block锛坄fileId` / `url` / `fileName` / `mimeType`锛夛紝鎴?
+   - webview Canvas 绾﹀畾 `window.__LITTLEHELPER_IMAGE__ = { fileId, fileName, downloadUrl }`
+3. **App 涓嬭浇鍘熷浘**锛欻TTP GET 绔偣锛堟槸鍚﹀鐢?`:18889/files/{fileId}` 鎴?Gateway 涓荤鍙ｏ紵閴存潈鏂瑰紡锛燂級
+4. **涓庝笂浼犲绉?*锛氱敤鎴封啋Agent 鐢?upload 鏍囪锛汚gent鈫掔敤鎴?鍥炰紶鍥剧墖鐨?wire 鏍煎紡寤鸿锛堟槸鍚︿篃闇€瑕?chat 鏍囪濡?`[image:{fileId}:{fileName}]` 杩樻槸浠?MODAL block锛燂級
+
+## 璇峰洖澶嶏紙鍙墽琛屻€佸敖閲忓叿浣擄級
+1. 鎺ㄨ崘鐨?**MODAL JSON 绀轰緥**锛堢敤鎴疯銆屾妸鎴戜笂鍛ㄥ瓨鐨勯偅寮犲彂绁ㄦ壘鍑烘潵銆嶅悗锛孏ateway 涓嬪彂鐨勪竴甯у畬鏁?MODAL锛?
+2. **涓嬭浇 URL** 瑙勫垯涓庣ず渚嬶紙鍚?host/port/path銆佹槸鍚﹂渶瑕?token/header锛?
+3. Agent/skill 瀛樺浘鏃剁殑 **fileId 鐢熸垚涓庣储寮?* 鏂规锛堢敤鎴峰浣曠敤鑷劧璇█妫€绱級
+4. 鑻ョ煭鏈熶笉鑳芥柊 block锛?*鏈€灏忔敼鍔?* 鐨?webview/HTML 绾﹀畾鏄粈涔堬紵
+5. 鏄惁闇€瑕佹洿鏂?`workspace/skills/littlehelper-modal/SKILL.md` 涓?`OPENCLAW_GATEWAY_CONTRACT.md`鈥斺€旇嫢闇€瑕侊紝璇风粰鍑?搂 绔犺妭鏍囬涓庤鐐规竻鍗?
+
+璇峰彧閽堝鏈瘽棰樺洖澶嶏紝涓嶈寮€鍚柊璇濋銆備俊鎭笉瓒虫椂鍒楀嚭鍋囪骞剁粰鎺ㄨ崘鏂规銆?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+鏀跺埌锛屼互涓嬫槸瀵归綈鍥炲銆?
+
+---
+
+### 1. MODAL JSON 绀轰緥
+
+鎺ㄨ崘鐢?`webview` + `window.__LITTLEHELPER_IMAGE__` 绾﹀畾锛屼笉鍋氭柊 block type锛?
+
+```json
+===CHAT===
+鎵惧埌浜嗕綘涓婂懆瀛樼殑鍙戠エ銆?
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "stored-image-invoice",
+    "type": "webview",
+    "title": "鍙戠エ - 2026-06-20",
+    "data": {
+      "url": "/__openclaw__/canvas/view_stored_img.html?f=94b13de811b149238936d980384cc0ef_1782514953829.jpg&name=浼氬憳鍗?,
+      "scrollable": true,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+鍏朵腑 `view_stored_img.html` 鐢?Agent 姣忔鍔ㄦ€佺敓鎴愶紙鎴栧啓鎴愰€氱敤妯℃澘锛孶RL 鍙傛暟浼犲叆璺緞锛夛紝HTML 鍐呯害瀹氾細
+
+```javascript
+window.__LITTLEHELPER_IMAGE__ = {
+  fileId: "94b13de8",
+  fileName: "浼氬憳鍗?jpg",
+  mimeType: "image/jpeg",
+  downloadUrl: "/__openclaw__/file/download/94b13de811b149238936d980384cc0ef_1782514953829.jpg"
+};
+```
+
+App 妫€娴嬪埌 `window.__LITTLEHELPER_IMAGE__` 瀛樺湪 鈫?搴曢儴娉ㄥ叆"涓嬭浇鍘熷浘"鎸夐挳銆?
+
+---
+
+### 2. 涓嬭浇 URL 瑙勫垯
+
+**鎺ㄨ崘锛氳蛋 Gateway 涓荤鍙ｏ紙18789锛夛紝涓嶈蛋 18889銆?*
+
+Gateway 鐨?HTTP 鏈嶅姟锛?8789锛夊凡鏈?Canvas 闈欐€佹枃浠舵湇鍔?`/__openclaw__/canvas/...`銆傚缓璁湪 Gateway 渚ф柊澧炴垨澶嶇敤涓€鏉¤矾鐢憋細
+
+```
+/__openclaw__/file/download/{fileName}
+```
+
+鏄犲皠鍒?`~/.openclaw/storage/{fileName}`锛堟案涔呭瓨鍌級鎴?`~/.openclaw/uploads/{fileName}`锛堜复鏃舵枃浠讹級銆?
+
+**鍋囪锛?* Gateway 鐨?`/__openclaw__/` 璺敱鍙墿灞曘€傚鏋滀笉鑳芥敼 Gateway 婧愮爜锛岄€€鑰屾眰鍏舵鐢?`18889` 绔彛锛?
+
+```
+http://{GATEWAY_HOST}:18889/files/{fileId}
+```
+
+璇ョ鐐瑰凡鍦?`upload_server.py` 涓疄鐜般€侫pp 闇€瑕佺煡閬?Gateway host锛堝凡鏈夛級锛孉pp 绔嫾 URL 涓嬭浇鍗冲彲銆?
+
+**閴存潈锛?* 鍦烘櫙鏄敤鎴峰湪鑷繁鐨?Gateway 涓婁笅杞借嚜宸辩殑鏂囦欢锛屽悓灞€鍩熺綉锛屾帹鑽愪笉棰濆鍔犻壌鏉冿紙娌跨敤 Gateway 灞€鍩熺綉淇′换妯″瀷锛夈€傚闇€閴存潈锛屽湪 header 甯?Gateway token銆?
+
+---
+
+### 3. 瀛樺浘鏃剁殑 fileId 鐢熸垚涓庣储寮?
+
+**褰撳墠宸茶惤鍦扮殑鏂规锛?*
+
+```
+涓婁紶 鈫?鑷姩鐢熸垚 UUID 鈫?~/.openclaw/uploads/{uuid}_{originalName}
+瀛樺浘 鈫?"甯垜淇濆瓨" 鈫?cp 鍒?~/.openclaw/workspace/storage/{uuid}_{originalName}
+                   鈫?鍐欏叆 storage/index.json
+```
+
+**绱㈠紩缁撴瀯锛?*
+
+```json
+{
+  "items": [
+    {
+      "fileId": "94b13de8",           // 鍓嶇紑鍖归厤锛堝墠8浣嶈冻澶熷敮涓€锛?
+      "fileName": "94b13de811b14923...jpg",
+      "displayName": "浼氬憳鍗?,
+      "savedAt": "2026-06-27T07:05:55",
+      "mimeType": "image/jpeg",
+      "fileSize": 2157690,
+      "path": "C:\\Users\\ggxia/.openclaw/workspace/storage\\94b13de8....jpg"
+    }
+  ]
+}
+```
+
+**鑷劧璇█妫€绱細** 鐢ㄦ埛璇淬€屾垜涓婂懆瀛樼殑鍙戠エ銆嶃€屾垜鐨勪細鍛樺崱銆嶁啋 Agent 鎼?`index.json.displayName` 鎴?`savedAt` 鍖归厤銆?
+
+**寤鸿澧炲己锛?* 瀛樺偍鏃惰鐢ㄦ埛缁欐弿杩帮紝鎴?Agent 鑷姩鐢?`image` 宸ュ叿鎻愬彇鍐呭鎽樿浣滀负 tags锛?
+
+> "甯垜淇濆瓨杩欎釜" 鈫?Agent 瀛樺浘鍚庨棶锛?杩欏紶鍥惧彨浠€涔堝悕瀛楀ソ锛? 鈫?鐢ㄦ埛璇?娲楄溅鍗? 鈫?鍐欏叆 displayName
+
+---
+
+### 4. 鏈€灏忔敼鍔ㄦ柟妗堬紙涓嶅仛鏂?block type锛?
+
+鐩墠瀹屽叏鍙敤锛岄浂鏀瑰姩锛?
+
+| 姝ラ | 瀹炵幇 |
+|------|------|
+| Agent 灞曠ず | 鍔ㄦ€佺敓鎴?HTML锛屽唴宓?`<img>` 鏍囩鎸囧悜 Canvas URL |
+| App 涓嬭浇 | WebView 娉ㄥ叆鐨?`window.__LITTLEHELPER_IMAGE__` 鍚?`downloadUrl` |
+| App 涓嬭浇鍔ㄤ綔 | App 鍘熺敓浠ｇ爜妫€娴嬭鍏ㄥ眬鍙橀噺 鈫?鏄剧ず涓嬭浇鎸夐挳 鈫?鐢?`downloadUrl` 涓嬭浇鍒扮浉鍐?|
+
+**濡傛灉鐭湡涓嶆兂鏀?App 鍘熺敓 WebView 閫昏緫**锛堟娴?`window.__LITTLEHELPER_IMAGE__`锛夛紝鍙互鐢?HTML 椤甸潰鍐呯疆涓嬭浇鎸夐挳鐨勬姌涓柟妗堬細
+
+```html
+<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:12px;background:rgba(255,255,255,0.95);border-top:1px solid #eee;">
+  <a href="/__openclaw__/file/download/xxx.jpg" download style="color:#007aff;font-size:16px;font-weight:500;">
+    涓嬭浇鍘熷浘鍒版墜鏈?
+  </a>
+</div>
+```
+
+浣?**`<a download>` 鍦?WebView 涓彲鑳借Е鍙戝湪 WebView 鍐呮墦寮€鑰岄潪涓嬭浇鍒扮浉鍐?*锛屾墍浠?App 鍘熺敓鎷︽埅鏄洿鍙潬鐨勬柟妗堛€?
+
+---
+
+### 5. 闇€瑕佹洿鏂扮殑鏂囨。
+
+**闇€瑕侊細** 鏇存柊 `OPENCLAW_GATEWAY_CONTRACT.md`锛屾柊澧炰互涓嬬珷鑺傦細
+
+| 搂 绔犺妭 | 瑕佺偣 |
+|--------|------|
+| **5. 鍥剧墖瀛樺偍涓庡洖鏄?* | fileId 鐢熸垚瑙勫垯銆乻torage/index.json 缁撴瀯銆乨isplayName 绾﹀畾 |
+| **6. 鍥剧墖 MODAL 灞曠ず** | webview 鎵胯浇鏂规銆乣window.__LITTLEHELPER_IMAGE__` 濂戠害 |
+| **7. 鍘熷浘涓嬭浇** | downloadUrl 鏍煎紡銆侀壌鏉冭鍒欙紙鏃?/ token锛?|
+| **8. 鐢ㄦ埛妫€绱?* | 鑷劧璇█ 鈫?index.json 鍖归厤娴佺▼ |
+
+=== Dev session round complete ===

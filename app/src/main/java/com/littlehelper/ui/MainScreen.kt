@@ -1,49 +1,34 @@
 package com.littlehelper.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
-import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,271 +36,141 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.littlehelper.viewmodel.MainUiState
-import com.littlehelper.BuildConfig
+import com.littlehelper.PanelState
 import com.littlehelper.R
-import com.littlehelper.data.MemoryRecord
-import com.littlehelper.data.map.MapServiceFactory
-import com.littlehelper.domain.map.IMapService
-import com.littlehelper.presentation.mapview.MapCard
-import com.littlehelper.presentation.stack.CardStackManager
-import com.littlehelper.presentation.stack.DrawerCard
-import com.littlehelper.presentation.stack.DrawerTabBar
-import com.littlehelper.ui.components.ChatBubble
-import com.littlehelper.ui.components.DashboardCard
-import com.littlehelper.ui.components.VoiceHoldButton
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.littlehelper.ui.layout.ChatFlowSection
+import com.littlehelper.ui.layout.ChatInputBar
+import com.littlehelper.ui.layout.ChatInputBarLayout
+import com.littlehelper.ui.layout.MultiFunctionPanel
+import com.littlehelper.ui.layout.OpenClawStatusBanner
+import com.littlehelper.ui.layout.PanelLayout
+import com.littlehelper.shell.model.ShellMode
+import com.littlehelper.shell.projection.ShellUiProjector
+import com.littlehelper.ui.files.MyFilesSheet
+import com.littlehelper.viewmodel.MainUiState
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     uiState: MainUiState,
-    records: List<MemoryRecord>,
-    onHoldStart: () -> Unit,
-    onHoldEnd: (Long) -> Unit,
-    onHoldCancel: () -> Unit,
-    onToggleTodo: (MemoryRecord) -> Unit,
-    onDeleteRecord: (MemoryRecord) -> Unit,
     onDeleteMessage: (String) -> Unit,
-    onClearChatMessages: () -> Unit,
     showClearAllDialog: Boolean,
     onConfirmClearAll: () -> Unit,
     onDismissClearAll: () -> Unit,
-    onDrawerSelect: (DrawerCard) -> Unit,
-    onMapInstructionConsumed: (com.littlehelper.domain.map.MapExecuteResult?) -> Unit,
+    onPanelExpand: () -> Unit,
+    onPanelCollapse: () -> Unit,
+    onRetryOpenClawConnect: () -> Unit = {},
+    onComposerDraftChange: (String) -> Unit = {},
+    onSendComposerText: () -> Unit = {},
+    onAttachmentPicked: (ByteArray, String, String) -> Unit = { _, _, _ -> },
+    onClearPendingAttachment: () -> Unit = {},
+    onToggleGatewayTts: () -> Unit = {},
+    onNavigateModalHistory: (Int) -> Unit = {},
+    onDeleteModalHistoryPage: () -> Unit = {},
+    onOpenCanvasAmap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var showClearChatDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
     val listState = rememberLazyListState()
-    val dashboardState = rememberLazyListState()
-    val lastMessageKey = uiState.messages.lastOrNull()?.let { "${it.id}:${it.text}:${it.isPartial}" }
+    var showMyFiles by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.messages.size, lastMessageKey) {
-        if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.lastIndex)
-        }
-    }
+    val displayMessages = ShellUiProjector.messages(uiState)
+    val displayPanelState = ShellUiProjector.panelState(uiState)
 
-    val cardStackManager = remember { CardStackManager() }
-    val mapService: IMapService = remember { MapServiceFactory.create() }
-
-    DisposableEffect(mapService) {
-        onDispose { mapService.onDestroy() }
-    }
-
-    LaunchedEffect(uiState.activeDrawerCard) {
-        cardStackManager.switchToCard(uiState.activeDrawerCard)
-    }
-
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    val peekHeight = 160.dp
-    val sheetExpandedHeight = screenHeight * 0.72f
-
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = true
-        )
-    )
-
-    LaunchedEffect(uiState.drawerExpandRequest) {
-        if (uiState.drawerExpandRequest > 0) {
-            scaffoldState.bottomSheetState.expand()
-        }
-    }
-
-    LaunchedEffect(uiState.mapExecutionToken) {
-        if (uiState.mapExecutionToken == 0) return@LaunchedEffect
-        val request = uiState.pendingMapInstruction ?: return@LaunchedEffect
-        val supplementTts = uiState.pendingMapFallbackTts?.let {
-            com.littlehelper.domain.map.MapTtsAuthorization.isSdkDynamicTtsAuthorized(it)
-        } == true
-        mapService.initialize(context, BuildConfig.AMAP_API_KEY)
-        delay(400)
-        val result = runCatching {
-            mapService.executeInstruction(
-                context,
-                request.action,
-                request.payload,
-                supplementTts
-            )
-        }.getOrNull()
-        onMapInstructionConsumed(result)
-    }
-
-    val glassShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-    val sheetScope = rememberCoroutineScope()
-
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Color(0xFFF2F2F7))
+            .systemBarsPadding()
     ) {
-        BottomSheetScaffold(
-            scaffoldState = scaffoldState,
-            sheetPeekHeight = peekHeight,
-            sheetSwipeEnabled = false,
-            containerColor = Color.Transparent,
-            sheetContainerColor = Color.Transparent,
-            sheetShadowElevation = 0.dp,
-            sheetDragHandle = null,
-            sheetContent = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(sheetExpandedHeight)
-                        .background(
-                            color = Color.White.copy(alpha = 0.95f),
-                            shape = glassShape
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.8f),
-                            shape = glassShape
-                        )
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(scaffoldState, sheetScope) {
-                                    detectVerticalDragGestures { _, dragAmount ->
-                                        sheetScope.launch {
-                                            if (dragAmount < -12f) {
-                                                scaffoldState.bottomSheetState.expand()
-                                            } else if (dragAmount > 12f) {
-                                                scaffoldState.bottomSheetState.partialExpand()
-                                            }
-                                        }
-                                    }
-                                }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.CenterHorizontally)
-                                    .padding(top = 12.dp, bottom = 4.dp)
-                                    .size(width = 40.dp, height = 4.dp)
-                                    .background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
-                            )
-
-                            DrawerTabBar(
-                                cards = cardStackManager.registeredCards,
-                                activeCard = cardStackManager.activeCard,
-                                onSelect = { card ->
-                                    cardStackManager.selectCard(card)
-                                    onDrawerSelect(card)
-                                }
-                            )
-                        }
-
-                        AnimatedContent(
-                            targetState = cardStackManager.activeCard,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(220)) togetherWith
-                                    fadeOut(animationSpec = tween(180))
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            label = "drawerContent"
-                        ) { activeCard ->
-                            when (activeCard) {
-                                DrawerCard.NOTEBOOK -> NotebookDrawerContent(
-                                    records = records,
-                                    listState = dashboardState,
-                                    onToggleTodo = onToggleTodo,
-                                    onDeleteRecord = onDeleteRecord
-                                )
-
-                                DrawerCard.MAP -> MapCard(
-                                    currentCard = activeCard,
-                                    mapService = mapService,
-                                    poiResults = uiState.mapPoiResults,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .systemBarsPadding()
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = listState,
-                    contentPadding = PaddingValues(dimensionResource(R.dimen.chat_list_padding))
-                ) {
-                    items(
-                        items = uiState.messages,
-                        key = { it.id }
-                    ) { message ->
-                        ChatBubble(
-                            message = message,
-                            isSpeaking = message.id == uiState.speakingMessageId,
-                            onDeleteMessage = onDeleteMessage
-                        )
-                    }
-                }
-            }
+        val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+        val density = LocalDensity.current
+        val estimatedInputHeight = ChatInputBarLayout.sectionHeight
+        var inputChromePx by remember { mutableIntStateOf(0) }
+        val inputHeight = with(density) {
+            if (inputChromePx > 0) inputChromePx.toDp() else estimatedInputHeight
         }
-
-        VoiceHoldButton(
-            uiState = uiState,
-            onHoldStart = onHoldStart,
-            onHoldEnd = onHoldEnd,
-            onHoldCancel = onHoldCancel,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+        val canvasHeight = (maxHeight - inputHeight).coerceAtLeast(0.dp)
+        val expandedPanelHeight = canvasHeight * (2f / 3f)
+        val targetPanelHeight = when (displayPanelState) {
+            PanelState.COLLAPSED -> PanelLayout.openClawCollapsedHeight
+            PanelState.EXPANDED -> expandedPanelHeight
+        }
+        val panelAnimationSpec = if (displayPanelState == PanelState.EXPANDED) {
+            PanelLayout.modalHeightAnimationSpec
+        } else {
+            PanelLayout.heightAnimationSpec
+        }
+        val panelHeight by animateDpAsState(
+            targetValue = targetPanelHeight,
+            animationSpec = panelAnimationSpec,
+            label = "panelHeight"
         )
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 16.dp)
-                .size(48.dp)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = { showClearChatDialog = true }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "🧹", fontSize = 24.sp)
-        }
-    }
+        // 单列流式布局：聊天 weight(1f) 自动让出白板+输入栏，避免 Box 叠层 padding 对不齐
+        Column(modifier = Modifier.fillMaxSize()) {
+            OpenClawStatusBanner(
+                uiState = uiState,
+                onRetryConnect = onRetryOpenClawConnect
+            )
 
-    if (showClearChatDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearChatDialog = false },
-            title = { Text(text = "提示") },
-            text = { Text(text = "是否删除当前所有对话？") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onClearChatMessages()
-                    showClearChatDialog = false
-                }) {
-                    Text("是", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearChatDialog = false }) {
-                    Text("否")
-                }
-            }
-        )
+            ChatFlowSection(
+                messages = displayMessages,
+                speakingMessageId = ShellUiProjector.speakingMessageId(uiState),
+                panelState = displayPanelState,
+                listState = listState,
+                onDeleteMessage = onDeleteMessage,
+                gatewayConnectionState = if (uiState.shellMode == ShellMode.OPENCLAW) {
+                    ShellUiProjector.gatewayConnectionState(uiState)
+                } else {
+                    null
+                },
+                gatewayTtsEnabled = uiState.gatewayTtsEnabled,
+                onToggleGatewayTts = if (uiState.shellMode == ShellMode.OPENCLAW) {
+                    onToggleGatewayTts
+                } else {
+                    null
+                },
+                onRetryGatewayConnect = if (uiState.shellMode == ShellMode.OPENCLAW) {
+                    onRetryOpenClawConnect
+                } else {
+                    null
+                },
+                onOpenMyFiles = if (uiState.shellMode == ShellMode.OPENCLAW) {
+                    { showMyFiles = true }
+                } else {
+                    null
+                },
+                showAssistantThinking = ShellUiProjector.showAssistantThinking(uiState),
+                inputScrollKey = imeBottom.toString(),
+                panelLayoutKey = panelHeight.toString(),
+                modifier = Modifier.weight(1f)
+            )
+
+            MultiFunctionPanel(
+                panelHeight = panelHeight,
+                panelState = displayPanelState,
+                activeModule = uiState.shell.activeModule,
+                moduleLoadState = ShellUiProjector.moduleLoadState(uiState),
+                modulePayload = ShellUiProjector.modulePayload(uiState),
+                modalState = ShellUiProjector.modalState(uiState),
+                modalHistory = ShellUiProjector.modalHistory(uiState),
+                onNavigateModalHistory = onNavigateModalHistory,
+                onDeleteModalHistoryPage = onDeleteModalHistoryPage,
+                onOpenCanvasAmap = onOpenCanvasAmap,
+                onRequestExpand = onPanelExpand,
+                onRequestCollapse = onPanelCollapse
+            )
+
+            ChatInputBar(
+                uiState = uiState,
+                connectionState = uiState.shell.connectionState,
+                onDraftChange = onComposerDraftChange,
+                onSendText = onSendComposerText,
+                onAttachmentPicked = onAttachmentPicked,
+                onClearPendingAttachment = onClearPendingAttachment,
+                modifier = Modifier.onSizeChanged { inputChromePx = it.height }
+            )
+        }
     }
 
     if (showClearAllDialog) {
@@ -324,32 +179,11 @@ fun MainScreen(
             onDismiss = onDismissClearAll
         )
     }
-}
 
-@Composable
-private fun NotebookDrawerContent(
-    records: List<MemoryRecord>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    onToggleTodo: (MemoryRecord) -> Unit,
-    onDeleteRecord: (MemoryRecord) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        state = listState,
-        contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp)
-    ) {
-        items(
-            items = records,
-            key = { it.id }
-        ) { record ->
-            DashboardCard(
-                record = record,
-                onToggleTodo = onToggleTodo,
-                onDeleteRecord = onDeleteRecord
-            )
-        }
-    }
+    MyFilesSheet(
+        visible = showMyFiles,
+        onDismiss = { showMyFiles = false }
+    )
 }
 
 @Composable
@@ -367,7 +201,7 @@ private fun ClearAllConfirmDialog(
                 .background(Color(0xFFF3E0E0))
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = stringResource(R.string.clear_all_dialog_title),

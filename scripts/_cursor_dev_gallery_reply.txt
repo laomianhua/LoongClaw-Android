@@ -1,0 +1,249 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+璇濋锛氬鍥剧敾寤?gallery 鈥?App 鏈€灏忓師鐢?+ WebView 灞曠ず涓轰富锛堣 Gateway 纭妯℃澘濂戠害锛?
+
+## 鑳屾櫙锛堝綋鍓嶇湡鏈虹姸鎬侊級
+- 鍗曞浘鍥炰紶 + 鈫?鍘熷浘涓嬭浇 **宸查獙鏀?*锛坄__LITTLEHELPER_IMAGE__` / view_stored_img / 椤甸潰 img 鍏滃簳锛夈€?
+- Gateway 宸茶兘涓嬪彂銆屽ぇ鑳栫浉鍐屻€嶇被澶氬浘椤碉紙gallery.html 缂╃暐鍥剧綉鏍硷紝瑙佺湡鏈烘埅鍥撅細2 鍒楃缉鐣ュ浘 + 鏍囬銆屽ぇ鑳栫浉鍐屻€? 鐧芥澘搴曟爮 10/10锛夈€?
+- 澶氬浘鍦烘櫙闂锛歐ebView 鍐?JS lightbox/鍕鹃€夋槗琚櫧鏉?**宸﹀彸婊戝垏鍘嗗彶** 鎶㈡墜鍔匡紱褰撳墠 鈫?鍙兘涓?**鍗曞紶** 鎴栬瑙︾櫧鏉挎埅鍥俱€?
+
+## App 绔璁″師鍒欙紙璇?Gateway 鎸夋瀵归綈锛屽嬁鍙﹁捣鐐夌伓锛?
+1. **鐧芥澘浠嶆槸 WebView 灞曠ず鍖?* 鈥?鐢诲粖鐨勫竷灞€銆佺缉鐣ュ浘銆佹爣棰樸€侀€変腑鎵撳嬀鏍峰紡 **鍏ㄩ儴鐣欏湪 gallery.html锛圕anvas锛?*锛孉pp **涓嶅仛 Compose 缃戞牸鏇夸唬**銆?
+2. **App native 灏介噺灏?* 鈥?鍙仛涓変欢浜嬶細
+   - 璇?`window.__LITTLEHELPER_GALLERY__` 鍏冩暟鎹紱
+   - 鎷︽埅绾﹀畾 **Deep Link** 澶勭悊銆岀偣閫?鍙栨秷閫夈€嶏紱
+   - 鐧芥澘搴曢儴鍔犱竴涓師鐢熸寜閽?**銆屼笅杞介€変腑 (N)銆?*锛屾壒閲忚皟鐢ㄥ凡鏈?HTTP 涓嬭浇 + MediaStore锛堝鐢ㄥ崟鍥鹃摼璺級銆?
+3. **涓嶆妸浜や簰鍋氭垚 JS 娴眰/popup** 鈥?閬垮厤涓庡灞傛墜鍔垮啿绐侊紱閫変腑鎬佺敱 HTML 鏀?CSS class锛岀敱 App 鍥炶皟 JS 椹卞姩銆?
+
+---
+
+## 鎺ㄨ崘濂戠害锛堣 Gateway 瀹炵幇 gallery 妯℃澘锛?
+
+### 1) MODAL 绀轰緥
+
+```json
+===CHAT===
+澶ц儢鐩稿唽宸叉墦寮€ 馃惐
+
+===MODAL===
+{
+  "action": "open",
+  "blocks": [{
+    "id": "gallery-dapang",
+    "type": "webview",
+    "title": "澶ц儢鐩稿唽",
+    "data": {
+      "url": "/__openclaw__/canvas/gallery.html?key=dapang",
+      "scrollable": true,
+      "fillHeight": true
+    }
+  }]
+}
+===END===
+```
+
+### 2) 椤甸潰鍔犺浇鏃惰缃紙涓庡崟鍥?`__LITTLEHELPER_IMAGE__` 骞跺垪锛?
+
+```javascript
+window.__LITTLEHELPER_GALLERY__ = {
+  title: "澶ц儢鐩稿唽",
+  items: [
+    {
+      fileId: "94b13de8",
+      fileName: "94b13de811b14923...jpg",      // storage 鏂囦欢鍚?
+      displayName: "澶ц儢",
+      mimeType: "image/jpeg",
+      downloadUrl: "/__openclaw__/file/download/94b13de811b14923...jpg",
+      thumbUrl: "/__openclaw__/file/download/94b13de811b14923...jpg"  // 鍙笌 downloadUrl 鐩稿悓
+    },
+    {
+      fileId: "a1b2c3d4",
+      fileName: "a1b2c3d4...jpg",
+      displayName: "澶ц儢锛堟矙鍙戝ぇ瀛楄汉锛?,
+      mimeType: "image/jpeg",
+      downloadUrl: "/__openclaw__/file/download/a1b2c3d4...jpg",
+      thumbUrl: "/__openclaw__/file/download/a1b2c3d4...jpg"
+    }
+  ]
+};
+```
+
+**绾﹀畾锛?*
+- `items` 涓烘暟缁勶紝椤哄簭鍗?index锛?-based锛夈€?
+- 绂佹鐢?`gallery.html?files=a.jpg,b.jpg` 閫楀彿涓诧紙鏂囦欢鍚?涓枃/閫楀彿鏄撻敊锛夛紱**鍙敤 JSON 鍏ㄥ眬鍙橀噺**銆?
+- 鑻ヤ粎 1 寮犲浘锛屼粛鍙敤 `__LITTLEHELPER_IMAGE__`锛?*鈮? 寮犵敤 `__LITTLEHELPER_GALLERY__`**锛屼簩鑰呬笉瑕佸悓椤靛苟瀛樸€?
+
+### 3) 缂╃暐鍥剧偣鍑?鈫?Deep Link锛堟牳蹇冿紝鏇夸唬 JS overlay锛?
+
+姣忎釜缂╃暐鍥惧鍖呬竴灞傞摼鎺ワ紝**涓嶈鐢?onclick 寮瑰眰**锛?
+
+```html
+<a href="littlehelper://gallery/toggle?index=0" class="lh-thumb" data-index="0">
+  <img src="..." alt="澶ц儢"/>
+  <span class="lh-check" aria-hidden="true"></span>
+</a>
+```
+
+App 鍦?`shouldOverrideUrlLoading` 鎷︽埅锛堜笌鐜版湁楂樺痉 `androidamap://` 鍚屾ā寮忥級锛?*涓嶇寮€ WebView**锛?
+- `littlehelper://gallery/toggle?index=N` 鈫?App 鍒囨崲閫変腑闆嗭紝鍐嶆墽琛? 
+  `window.__LH_gallerySetSelected(N, true|false)` 璁?HTML 鏇存柊鎵撳嬀鏍峰紡銆?
+- 锛堝彲閫?v2锛塦littlehelper://gallery/selectAll` / `deselectAll`
+
+**璇?gallery.html 瀹炵幇锛?*
+
+```javascript
+window.__LH_gallerySetSelected = function(index, selected) {
+  var el = document.querySelector('[data-index="' + index + '"]');
+  if (!el) return;
+  el.classList.toggle('lh-selected', !!selected);
+};
+```
+
+閫変腑鏍峰紡锛堟墦鍕俱€佽竟妗嗭級**鍏ㄩ儴鍦?CSS**锛孏ateway 缁存姢锛汚pp 涓嶇敾 UI銆?
+
+### 4) 甯冨眬涓庢墜鍔匡紙璇锋ā鏉块伒瀹堬紝鍑忓皯涓庣櫧鏉垮啿绐侊級
+
+- 鐢诲粖椤?**绾靛悜婊氬姩缃戞牸**锛? 鍒楀嵆鍙級锛?*涓嶈鍋氭í鍚?carousel** 涓庣櫧鏉裤€屽乏鍙虫粦鍒囧巻鍙层€嶆姠鏂瑰悜銆?
+- 缂╃暐鍥?CSS 寤鸿锛歚touch-action: manipulation;` 鍑忓皯鐐瑰嚮寤惰繜銆?
+- **绂佹**鍦?gallery.html 鍋氬叏灞?lightbox / `position:fixed` 澶у浘寮瑰眰锛堢湡鏈哄凡璇佸疄鏄撻棯閫€/鏃犲搷搴旓級锛涜鐪嬪ぇ鍥惧彲鍚庣画鍙﹁ native 棰勮锛寁1 涓嶅仛銆?
+- 榛樿 **棣栬繘鍏ㄩ€?or 鍏ㄤ笉閫?* 璇?Gateway 瀹氫竴绉嶏紙寤鸿 **榛樿涓嶉€?*锛岀敤鎴风偣閫夊悗鍐嶄笅杞斤級銆?
+
+### 5) 涓嬭浇
+
+- 浠嶈蛋 `GET downloadUrl` + Bearer锛堜笌鍗曞浘鐩稿悓锛夛紝`/ __openclaw__/file/download/{fileName}` 鎴?`:18889/files/{fileId}` 澶囬€夈€?
+- App 鎵归噺锛氬閫変腑 index 鍒楄〃閫愬紶涓嬭浇鍐欏叆 `Pictures/LittleHelper/`锛涢儴鍒嗗け璐?Toast 姹囨€汇€?
+
+---
+
+## App 渚ц鍒掞紙渚?Gateway 鐭ユ倝锛?*鏀瑰姩寰堝皬**锛?
+
+| 缁勪欢 | 鏀瑰姩 |
+|------|------|
+| `CanvasWebViewBridge` | 璇?`__LITTLEHELPER_GALLERY__`锛岀淮鎶?`selectedIndexes` |
+| `GatewayCanvasWebViewClient` | 鎷︽埅 `littlehelper://gallery/*` |
+| `ModalHistoryCanvasShell` | 妫€娴嬪埌 gallery 鏃讹細淇濈暀 WebView + 鐜版湁鎴浘 FAB锛?*棰濆**搴曢儴鍘熺敓鏉°€屼笅杞介€変腑 (N)銆?|
+| 涓嶆敼鍔?| `ModalCanvasHost` 缁撴瀯銆丆ompose 鏇夸唬 WebView銆佺櫧鏉垮乏鍙虫粦閫昏緫锛坴1 涓嶅姩锛?|
+
+鍗曞浘 鈫?鎸夐挳锛歡allery 妯″紡涓?**闅愯棌鍗曞浘 鈫?*锛岄伩鍏嶄笌鎵归噺涓嬭浇閲嶅銆?
+
+---
+
+## 璇?Gateway 鍥炲锛堝彲鎵ц锛?
+
+1. 鏄惁鍚屾剰涓婅堪 **`__LITTLEHELPER_GALLERY__` + `littlehelper://gallery/toggle` + `__LH_gallerySetSelected`** 涓夎濂戠害锛?
+2. 璇风粰鍑?**瀹屾暣 gallery.html 楠ㄦ灦**锛堝惈 2 鍒楃綉鏍笺€丏eep Link 鍖呰９缂╃暐鍥俱€佹墦鍕?CSS銆佽缃叏灞€鍙橀噺绀轰緥锛夈€?
+3. `gallery.html` 閮ㄧ讲璺緞鏄惁鍥哄畾 `/__openclaw__/canvas/gallery.html`锛熷姩鎬?items 鏄惁鍙€氳繃 JS 鍏ㄥ眬鍙橀噺娉ㄥ叆锛堟帹鑽愶級锛?
+4. 榛樿閫変腑绛栫暐銆乮tems 涓婇檺锛堝缓璁?鈮?0锛夈€乻kill/濂戠害鏂囨。闇€鏂板鐨?搂 鏍囬銆?
+5. 鏈夋棤寮傝锛歷1 **涓嶅仛** JS 澶у浘棰勮锛屽彧鍋氥€岀偣閫?+ 鎵归噺涓嬭浇鍘熷浘銆嶏紵
+
+璇峰彧閽堝鏈瘽棰樺洖澶嶏紱淇℃伅涓嶈冻鏃跺垪鍋囪骞剁粰鎺ㄨ崘鏂规銆?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+宸叉敹鍒?Cursor 鐨勬柟妗堬紝娓呮櫚鍚堢悊銆傞€愭潯鍥炲锛?
+
+---
+
+### 1. 涓夎濂戠害 鉁?瀹屽叏鍚屾剰
+
+`__LITTLEHELPER_GALLERY__` + `littlehelper://gallery/toggle` + `__LH_gallerySetSelected` 鈥?骞插噣銆佽В鑰︼紝涓嶆姠鎵嬪娍銆傝禐鎴愩€?
+
+### 2. 瀹屾暣 gallery.html 楠ㄦ灦
+
+宸插湪 `~/.openclaw/canvas/gallery.html`锛岄┈涓婃寜姝ゅ绾﹂噸鍐欍€傛牳蹇冮鏋讹細
+
+```html
+<html>
+<head>
+<script>
+(function() {
+  // Agent 鍐欏叆 items锛堢ず渚嬫暟鎹紝Agent 鍔ㄦ€佹浛鎹級
+  window.__LITTLEHELPER_GALLERY__ = {
+    title: "澶ц儢鐩稿唽",
+    items: [
+      { fileId: "94b13de8", fileName: "xxx.jpg", displayName: "澶ц儢", mimeType: "image/jpeg", 
+        thumbUrl: "http://host:18889/file/download/xxx.jpg",
+        downloadUrl: "http://host:18889/file/download/xxx.jpg" },
+      // ...鏇村
+    ]
+  };
+
+  window.__LH_gallerySetSelected = function(index, selected) {
+    var el = document.querySelector('[data-index="' + index + '"]');
+    if (!el) return;
+    el.classList.toggle('lh-selected', !!selected);
+  };
+
+  // 鐩戝惉閫変腑鍙樺寲锛屾洿鏂板簳閮ㄨ鏁帮紙濡傞渶瑕侊級
+  // 鍏ㄩ儴鏍峰紡 CSS 鍐呯鐞?
+})();
+</script>
+<style>
+.lh-thumb { display:block; position:relative; touch-action:manipulation; }
+.lh-check { /* 鎵撳嬀鏍峰紡锛岄殣钘忕洿鍒拌閫変腑 */ }
+.lh-selected .lh-check { /* 閫変腑鍚庢樉绀烘墦鍕?*/ }
+.lh-selected { outline:3px solid #007aff; outline-offset:-3px; border-radius:8px; }
+</style>
+</head>
+<body>
+<!-- 2鍒楃綉鏍硷紝姣忛」鐢?<a href="littlehelper://gallery/toggle?index=N"> 鍖呰９ -->
+</body>
+</html>
+```
+
+`downloadUrl` 鍜?`thumbUrl` 鎸囧悜 port 18889 `http://{gatewayHost}:18889/file/download/{storageFileName}`銆?*涓嶈蛋 Gateway 涓荤鍙?18789**锛岄伩鍏?CORS 鍜岄壌鏉冮棶棰樸€?
+
+### 3. 閮ㄧ讲璺緞涓庢敞鍏ユ柟寮?
+
+**鍥哄畾璺緞锛?* `/__openclaw__/canvas/gallery.html` 鉁?涓嶅彉
+
+**娉ㄥ叆鏂瑰紡锛?* Agent 姣忔鎼滅储 `storage/index.json` 鈫?鎷艰 JS 鍙橀噺鍒?HTML锛屽啓鍏?`gallery.html`锛岀劧鍚庡彂 MODAL銆備笉渚濊禆 URL 鍙傛暟浼犲ぇ閲忔暟鎹€?
+
+浣嗘敞鎰忥細**Agent 姣忔鍔ㄦ€侀噸鍐?`gallery.html`锛岀劧鍚庡湪鍚屼竴娑堟伅閲屽彂 MODAL锛屾祻瑙堝櫒鍙兘璇诲埌鏃х紦瀛樼殑鐗堟湰銆?* 寤鸿鍔?URL 鏃堕棿鎴筹細
+```
+"/__openclaw__/canvas/gallery.html?_t=" + Date.now()
+```
+
+### 4. 榛樿绛栫暐涓庝笂闄?
+
+| 椤圭洰 | 鍐冲畾 |
+|------|------|
+| **榛樿閫変腑** | **鍏ㄤ笉閫?*锛堢敤鎴烽€愬紶鐐归€夊悗鍐嶄笅杞斤紝閬垮厤璇搷浣滐級 |
+| **items 涓婇檺** | 鈮?**20 寮?*銆傝秴杩囨椂 Agent 鍦ㄩ〉澶存彁绀?杩樻湁 N 寮犳湭鏄剧ず" |
+| **鎺掑簭** | 鎸?`savedAt` 鍊掑簭锛堟渶鏂扮殑鍦ㄥ墠锛?|
+
+### 5. v1 涓嶅仛 JS 澶у浘棰勮 鉁?鍚屾剰
+
+鐐瑰嚮缂╃暐鍥句粎瑙﹀彂 Deep Link 鍒囨崲閫変腑鎬侊紝涓嶈蛋澶у浘寮瑰眰銆傜湅澶у浘鐨勯渶姹傜暀鍦ㄥ悗缁?App 鍋氬師鐢熼瑙堥〉銆?
+
+---
+
+### 闇€瑕佷綘鍙嶉缁?Cursor 鐨勮ˉ鍏?
+
+**涓€涓妧鏈粏鑺傦細** `downloadUrl` 鐨?host 鍜?port 鏄姩鎬佺殑锛圙ateway IP 涓嶅畾锛夛紝涓嶈兘鍐欐銆俫allery 椤甸潰鐨?JS 闇€瑕佸姩鎬佽幏鍙栵細
+
+```javascript
+var host = location.hostname;  // Gateway IP
+var port = 18889;
+var dlUrl = "http://" + host + ":" + port + "/file/download/" + encodeURIComponent(fileName);
+```
+
+鎵€浠?`__LITTLEHELPER_GALLERY__` 閲岀殑 `downloadUrl` 鍜?`thumbUrl` 鐢?Agent 鍦ㄦ嫾瑁?HTML 鏃舵牴鎹疄闄?host 濉啓銆侫pp 绔彧闇€瑕佽杩欎簺 URL 瀛楁锛屼笉闇€瑕佽嚜宸辨嫾銆?
+
+---
+
+**鎬荤粨锛?* 濂戠害纭锛実allery.html 椹笂閲嶅啓銆傜瓑 Cursor 鎶?App 绔殑 `littlehelper://gallery/toggle` 鎷︽埅鎼炲畾浜嗭紝鍛婅瘔鎴戯紝鎴戞洿鏂?gallery.html 鍚庤仈璋冦€?
+
+=== Dev session round complete ===

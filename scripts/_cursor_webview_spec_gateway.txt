@@ -1,0 +1,52 @@
+【LittleHelper App 联调 · WebView 能力测试页 · Gateway 侧部署】
+
+背景（已完成）：
+- App 本地 bundled 测试已删除；webview_spec_test.html 必须由 Gateway HTTP 提供（与 blank.html / test.html 同路径）。
+- 用户真机验证：App 内置副本下高德瓦片满屏、± 缩放正常。现需切到 Gateway 白板链路验收。
+
+请你（Gateway Agent）立即执行：
+
+1) 发布 Canvas 文件
+   - 将仓库 scripts/webview_spec_test.html 部署到：
+     ~/.openclaw/canvas/webview_spec_test.html
+   - 若你本机已有该文件，请用最新版覆盖（含多瓦片铺满、缩放重载逻辑）。
+   - 部署后自检：
+     curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer <token>" \
+       http://127.0.0.1:18789/__openclaw__/canvas/webview_spec_test.html
+     期望 200，且 body 含「WebView 能力测试」「华亭嘉园」。
+
+2) App 用户会话（agent:main:main）触发规则
+   当用户在手机 App 说以下任一意图时，回复 CHAT + MODAL（不要只文字描述）：
+   - 「打开 WebView 能力测试」/「webview 测试」/「打开 webview 测试页」
+
+3) 必须下发的 MODAL JSON（url 用相对路径，fillHeight 必须为 true）：
+```json
+{
+  "action": "open",
+  "blocks": [
+    {
+      "id": "webview-spec",
+      "type": "webview",
+      "title": "WebView 能力测试",
+      "data": {
+        "url": "/__openclaw__/canvas/webview_spec_test.html",
+        "scrollable": false,
+        "fillHeight": true
+      }
+    }
+  ]
+}
+```
+
+4) 禁止事项
+   - 不要用 map.html（会被 App 重定向到 map.littlehelper.html）
+   - 不要改 url 为绝对 http://100.x 或 192.168.x（App 会拼 gatewayBaseUrl）
+   - 不要删除或覆盖 map.littlehelper.html
+
+5) 请在本 dev 会话回复中确认：
+   A. 文件是否已写入 ~/.openclaw/canvas/webview_spec_test.html（是/否 + 文件大小）
+   B. curl 200 结果
+   C. 用户 App 会话应说的触发话术（一句话）
+   D. 若你无法直接写文件，给出你需要的具体命令或阻塞原因
+
+这是开发协调会话 agent:main:cursor-dev，回复后不要主动开新话题。

@@ -1,0 +1,135 @@
+﻿gateway=192.168.1.55:18789 session=agent:main:main
+-> send: 鎵撳紑 WebView 鑳藉姏娴嬭瘯
+
+--- session.message final=True ---
+{
+  "sessionKey": "agent:main:main",
+  "agentId": "main",
+  "message": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user sent the same request from the Android app side. This message came through the `openclaw-android` channel. I need to send the webview block again. But wait - since this message came from the Android app, my reply will go back to the Android app too.\n\nLet me send the webview block properly this time, using the correct URL. But I should use the URL format that App can access. Let me check what the canvas plugin is serving.\n\nActually, looking at the canvas skill more carefully - when the app has the canvas capability URL, it should receive the URL through `pluginSurfaceUrls.canvas`. But for the webview block protocol, I'm specifying the URL directly.\n\nLet me send it again properly."
+      },
+      {
+        "type": "text",
+        "text": "===CHAT===\nWebView 鑳藉姏娴嬭瘯椤甸潰锛屽姞杞界湅鐪嬶紵\n\n===MODAL===\n{\n  \"action\": \"open\",\n  \"blocks\": [\n    {\n      \"id\": \"webview-test\",\n      \"type\": \"webview\",\n      \"title\": \"WebView 鑳藉姏娴嬭瘯\",\n      \"data\": {\n        \"url\": \"http://100.112.96.116:18789/__openclaw__/canvas/webview_spec_test.html\",\n        \"height\": 600\n      }\n    }\n  ]\n}"
+      }
+    ],
+    "api": "openai-completions",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "input": 7030,
+      "output": 266,
+      "totalTokens": 40704,
+      "cacheRead": 33408,
+      "cacheWrite": 0,
+      "cost": {
+        "total": 0.00823016
+      }
+    },
+    "stopReason": "stop",
+    "timestamp": 1782140345758,
+    "responseId": "72597c23-bac1-4523-b0ed-af6087720bc9",
+    "__openclaw": {
+      "id": "52d68e90",
+      "seq": 57
+    }
+  },
+  "messageId": "52d68e90",
+  "messageSeq": 57,
+  "session": {
+    "key": "agent:main:main",
+    "kind": "direct",
+    "chatType": "direct",
+    "origin": {
+      "provider": "webchat",
+      "surface": "webchat",
+      "chatType": "direct"
+    },
+    "updatedAt": 1782140344344,
+    "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+    "systemSent": true,
+    "abortedLastRun": false,
+    "thinkingLevels": [
+      {
+        "id": "off",
+        "label": "off"
+      },
+      {
+        "id": "minimal",
+        "label": "minimal"
+      },
+      {
+        "id": "low",
+        "label": "low"
+      },
+      {
+        "id": "medium",
+        "label": "medium"
+      },
+      {
+        "id": "high",
+        "label": "high"
+      }
+    ],
+    "thinkingOptions": [
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
+    "thinkingDefault": "high",
+    "inputTokens": 5831,
+    "outputTokens": 1637,
+    "totalTokens": 40031,
+    "totalTokensFresh": true,
+    "estimatedCostUsd": 0.01405348,
+    "status": "running",
+    "startedAt": 1782140343894,
+    "modelProvider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "agentRuntime": {
+      "id": "auto",
+      "source": "implicit"
+    },
+    "contextTokens": 1000000,
+    "deliveryContext": {
+      "channel": "webchat"
+    },
+    "lastChannel": "webchat",
+    "hasActiveRun": true
+  },
+  "updatedAt": 1782140344344,
+  "sessionId": "edcfac81-e91d-4f35-bf98-1d5481a72fef",
+  "kind": "direct",
+  "chatType": "direct",
+  "origin": {
+    "provider": "webchat",
+    "surface": "webchat",
+    "chatType": "direct"
+  },
+  "deliveryContext": {
+    "channel": "webchat"
+  },
+  "systemSent": true,
+  "abortedLastRun": false,
+  "inputTokens": 5831,
+  "outputTokens": 1637,
+  "lastChannel": "webchat",
+  "totalTokens": 40031,
+  "totalTokensFresh": true,
+  "goal": null,
+  "contextTokens": 1000000,
+  "estimatedCostUsd": 0.01405348,
+  "modelProvider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "status": "running",
+  "hasActiveRun": true,
+  "startedAt": 1782140343894
+}
+
+assistant_events=1

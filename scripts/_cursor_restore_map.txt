@@ -1,0 +1,9 @@
+请立即恢复 ~/.openclaw/canvas/map.html 为正确的内联 Canvas/Leaflet 华亭嘉园地图版本（不是 base64 PNG 覆写版）。
+
+要求：
+1) 单文件内联 CSS+JS，URL 仍为 /__openclaw__/canvas/map.html
+2) 高德瓦片 + 缩放控件，Canvas 或 Leaflet 均可
+3) 完成后回复：文件名、文件大小（KB）、title 标签内容、首屏预期效果（一句话）
+4) 确认用户会话 agent:main:main 下发 MODAL 时用 data.url="/__openclaw__/canvas/map.html"
+
+不要反问 Cursor，写完直接确认。

@@ -1,0 +1,112 @@
+﻿=== OpenClaw Dev Session (Cursor <-> Gateway) ===
+gateway   = ws://192.168.1.55:18789
+session   = agent:main:cursor-dev  (App uses agent:main:main)
+device.id = d3974e4fdc09ad02c30f029deb72751133fac7362d4cc48ce25db2585a1b4fe2 (probe-device)
+auth      = deviceToken(saved)
+timeouts  = connect 15s, reply 180s
+
+[GW -> CURSOR] hello-ok scopes=['operator.read', 'operator.write']
+[CURSOR -> GW] sessions.create {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] session ready (create or exists)
+[CURSOR -> GW] sessions.messages.subscribe {"key": "agent:main:cursor-dev"}
+[GW -> CURSOR] subscribed
+[CURSOR -> GW] topic:
+銆怢ittleHelper 路 楂樺痉鍗曟寜閽?路 Gateway Canvas 浼犲弬瑙勮寖銆?
+
+App 宸叉敼涓虹櫧鏉垮簳閮ㄤ粎涓€涓寜閽細銆岀敤楂樺痉鍦板浘鏌ョ湅銆嶃€?
+璺宠浆鍒伴珮寰风殑**鍏蜂綋鍐呭锛堢湅 POI / 璺嚎 / 瀵艰埅锛夌敱 Gateway 鍦?Canvas HTML 閲屽喅瀹?*锛孉pp 鍙礋璐ｆ嫤鎴?URI 鎵撳紑楂樺痉 App銆?
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+涓€銆佷綘蹇呴』鍦ㄦ瘡寮犲湴鍥?Canvas 閲岃缃?
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+```javascript
+window.__LITTLEHELPER_MAP__ = { ... };
+```
+
+鍐欏湪 <script> 涓紙鍦板浘娓叉煋鍓嶆垨鍚庡潎鍙級銆侫pp 娉ㄥ叆鎸夐挳鏃朵細璇诲彇璇ュ璞°€?
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+浜屻€佷笁绉嶄紶鍙傛柟寮忥紙浠婚€夊叾涓€锛?
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+### A. 鐩存帴缁欏畬鏁?URI锛堟渶鐏垫椿锛屾帹鑽愯矾绾块〉锛?
+
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  amapUrl: "amapuri://route/plan/?sid=&slat=39.9785&slon=116.3617&sname=%E5%8D%8E%E4%BA%AD%E5%98%89%E5%9B%AD&did=&dlat=39.9087&dlon=116.3975&dname=%E5%A4%A9%E5%AE%89%E9%97%A8&dev=0&t=0"
+};
+```
+
+### B. action + 瀛楁锛堟帹鑽?Agent 鐢熸垚锛?
+
+| 鐢ㄦ埛鎰忓浘 | action | 蹇呭～瀛楁 | 楂樺痉琛ㄧ幇 |
+|----------|--------|----------|----------|
+| 鐪嬫煇鍦板湪鍝?| `view` | lat, lng, name | 鍦板浘鏍?POI |
+| 闂矾/鐪嬭矾绾?| `route` | route.{sLat,sLng,sName,dLat,dLng,dName,t} | 椹捐溅/鍏氦璺嚎瑙勫垝 |
+| 瀵艰埅鍒版煇鍦?| `navi` | lat, lng, name | 浠?GPS 瀵艰埅鍒扮粓鐐?|
+
+绀轰緥 鈥?鍗庝涵鍢夊洯鍗曠偣锛?
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  action: "view",
+  lat: 39.9785, lng: 116.3617, name: "鍗庝涵鍢夊洯"
+};
+```
+
+绀轰緥 鈥?鍗庝涵鍢夊洯 鈫?澶╁畨闂紙鐢ㄦ埛闂矾鏃跺簲鐢ㄨ繖涓級锛?
+```javascript
+window.__LITTLEHELPER_MAP__ = {
+  action: "route",
+  route: {
+    sLat: 39.9785, sLng: 116.3617, sName: "鍗庝涵鍢夊洯",
+    dLat: 39.9087, dLng: 116.3975, dName: "澶╁畨闂?,
+    t: "0"
+  }
+};
+```
+
+`action` 鍙渷鐣ワ細鏈?`route` 瀵硅薄 鈫?鑷姩鎸夎矾绾匡紱鍙湁 lat/lng 鈫?鎸夋煡鐪嬨€?
+
+### C. MODAL webview URL 鏌ヨ鍙傛暟锛堝鐢級
+
+```
+/__openclaw__/canvas/xxx.html?lh_action=route&lh_slat=...&lh_slng=...&lh_sname=...&lh_dlat=...&lh_dlng=...&lh_dname=...&lh_t=0
+```
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+涓夈€侀搧寰?
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+1. 鍧愭爣 **GCJ-02**锛孶RI 閲?`dev=0`
+2. `t`锛?椹捐溅 1鍏氦 2姝ヨ 3楠戣
+3. 涓枃鍚嶅湪 amapUrl 閲岄』 URL 缂栫爜锛涚粨鏋勫寲瀛楁鐢?UTF-8 鏄庢枃鍗冲彲锛圝S 浼?encode锛?
+4. **绂佹**涓昏烦杞敤 `https://uri.amap.com/navigation`锛圵ebView 闅惧敜璧?App锛?
+5. 闂矾/瀵艰埅鍦烘櫙榛樿 `action: "route"`锛屼笉瑕佸彧鐢ㄧ粓鐐?viewMap
+6. Canvas 鍙嚜宸辩敾鎸夐挳锛涜嫢鑷敾锛岀偣鍑绘椂 `location.href = buildUrl()`锛岄€昏緫鍚?`__LITTLEHELPER_MAP__`
+7. 鑻ラ〉闈㈠凡鏈?`#lh-amap-bar`锛孉pp 涓嶅啀娉ㄥ叆
+
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+鍥涖€佽绔嬪嵆鏇存柊
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣
+
+1. `map.littlehelper.html` 鈥?闄勪笂涓嬫柟鏈€鏂扮増锛堝崟鎸夐挳 + action:view 鍗庝涵鍢夊洯锛?
+2. 浠ュ悗鎵€鏈夎矾绾跨被鍔ㄦ€?Canvas 鈥?蹇呴』甯?`action:"route"` 鎴?`amapUrl`
+3. 鍐欏叆 `designs/amap-native-launch.md` 鎴?skill 闀滃儚
+
+鍐欏畬鍚庡洖澶嶏細宸叉洿鏂板摢浜涙枃浠?+ 鍗庝涵鍢夊洯鈫掑ぉ瀹夐棬绀轰緥鐢ㄧ殑 action銆?
+
+---BEGIN map.littlehelper.html---
+锛堣 Cursor 浠撳簱 scripts/canvas_map_littlehelper.html锛岃 read 鍚庡啓鍏?~/.openclaw/canvas/map.littlehelper.html锛?
+---END---
+
+鍕垮紑鏂拌瘽棰樸€?
+
+[CURSOR -> GW] sessions.send {"key": "agent:main:cursor-dev", "message": "浣犳槸 OpenClaw Gateway 涓?Cursor锛圠ittleHelper App 寮€鍙?IDE锛変箣闂寸殑鎶€鏈崗璋冨姪鎵嬨€俓n褰撳墠浼氳瘽 agent:main:cursor-dev 浠呯敤浜庡紑鍙戣仈璋冿紝涓嶆槸鎵嬫満 App 鐢ㄦ埛浼氳瘽銆俓n\n瑙勫垯锛歕n1. 鍙洖澶?Cursor 鍙戣捣鐨勬渶鏂颁竴鏉℃妧鏈棶棰橈紝涓嶈涓诲姩寮€鍚柊璇濋銆俓n2. 涓嶈鍚?Cursor 鎻愰棶绛夊緟鐢ㄦ埛鍥炵瓟锛涜嫢淇℃伅涓嶈冻锛屽垪鍑哄亣璁惧苟
+[CURSOR] 绛夊緟 Agent 鍥炲锛屾渶澶?180s 鈥?
+[GW -> CURSOR] (final)
+鏂囦欢宸插啓鍏ワ紝9437 bytes銆?
+
+鐜板湪鏇存柊璁捐鏂囨。鍜岃ˉ鍗庝涵鍢夊洯鈫掑ぉ瀹夐棬绀轰緥锛?
+
+=== Dev session round complete ===

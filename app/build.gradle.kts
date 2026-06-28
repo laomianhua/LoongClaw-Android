@@ -3,7 +3,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
 }
 
 val localProperties = Properties().apply {
@@ -52,19 +51,54 @@ android {
             "VOLC_CLUSTER",
             "\"${localProperties.getProperty("VOLC_CLUSTER", "")}\""
         )
+        buildConfigField(
+            "String",
+            "VOLC_STREAMING_CLUSTER",
+            "\"${localProperties.getProperty("VOLC_STREAMING_CLUSTER", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "VOLC_RESOURCE_ID",
+            "\"${localProperties.getProperty("VOLC_RESOURCE_ID", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "VOLC_STREAMING_WS_URL",
+            "\"${localProperties.getProperty("VOLC_STREAMING_WS_URL", "")}\""
+        )
+
+        buildConfigField(
+            "boolean",
+            "USE_OPENCLAW_SHELL",
+            localProperties.getProperty("USE_OPENCLAW_SHELL", "false")
+        )
+
+        buildConfigField(
+            "boolean",
+            "USE_OPENCLAW_MOCK",
+            localProperties.getProperty("USE_OPENCLAW_MOCK", "true")
+        )
 
         buildConfigField(
             "String",
-            "AMAP_API_KEY",
-            "\"${localProperties.getProperty("AMAP_API_KEY", "")}\""
+            "OPENCLAW_GATEWAY_HOST",
+            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_HOST", "192.168.1.55")}\""
         )
-
-        manifestPlaceholders["AMAP_API_KEY"] =
-            localProperties.getProperty("AMAP_API_KEY", "")
-
-        ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
-        }
+        buildConfigField(
+            "int",
+            "OPENCLAW_GATEWAY_PORT",
+            localProperties.getProperty("OPENCLAW_GATEWAY_PORT", "18789")
+        )
+        buildConfigField(
+            "String",
+            "OPENCLAW_GATEWAY_PASSWORD",
+            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_PASSWORD", "clawbot-test-2024")}\""
+        )
+        buildConfigField(
+            "String",
+            "OPENCLAW_GATEWAY_TOKEN",
+            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_TOKEN", "")}\""
+        )
     }
 
     buildTypes {
@@ -99,24 +133,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.activity:activity-ktx:1.10.1")
-    implementation("androidx.recyclerview:recyclerview:1.4.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-    implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("com.belerweb:pinyin4j:2.5.1")
-
-    // 高德 3D 地图 + 定位（合包，勿再单独引入 3dmap / location 以免冲突）
-    implementation("com.amap.api:3dmap-location-search:10.1.500_loc6.5.0_sea9.7.4")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -1,0 +1,41 @@
+---
+description: Android 资源 XML 声明顺序；编译前检查 launcher 文件（Android Studio 常生成错误顺序）
+globs: app/src/main/res/**/*
+alwaysApply: true
+---
+
+# Android 资源 XML：`<?xml` 必须在第一行
+
+Android Studio 的 **Image Asset / Launcher** 常会生成「版权注释在 `<?xml` 之前」的文件，导致：
+
+`Resource merger: 处理指令目标与 "[xX][mM][lL]" 的模式不匹配`（`packageDebugResources` 失败）
+
+## 每次编译前（`assembleDebug` 等）
+
+1. 若构建因上述 XML 错误失败，或用户刚改过 launcher / 图标，**先检查并修复**下列文件（及其他同类 `res` XML）：
+   - `app/src/main/res/values/ic_launcher_background.xml`
+   - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+   - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
+2. **第一行必须是** `<?xml version="1.0" encoding="utf-8"?>`；注释、许可证块放在声明**之后**。
+3. 修完再重新编译，无需用户手动改声明。
+
+## 正确示例
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright ...
+  -->
+<resources>...</resources>
+```
+
+## 错误示例（禁止）
+
+```xml
+<!--
+  ~ Copyright ...
+  -->
+<?xml version="1.0" encoding="utf-8"?>
+```
+
+用户未手动设置过声明顺序；问题来自 Android Studio 生成物，由 Agent 在编译流程中自动纠正。

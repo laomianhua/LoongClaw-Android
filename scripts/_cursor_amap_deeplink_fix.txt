@@ -1,0 +1,83 @@
+【续 · 白板跳转高德 · App 侧评审反馈 · 请确认并修订方案】
+
+已收到 `designs/amap-native-launch.md` 方向，整体可行（方案 2 为主：WebView 拦截高德 URI → Intent）。但真机现状与方案有几处**必须修正**，请在本会话确认：
+
+---
+
+## 1) map.littlehelper.html 不是 Leaflet（严重）
+
+我 curl 了 Gateway 当前文件（8395 bytes）：
+- 实现是 **Canvas + 高德瓦片**（`#tileCanvas`、± 按钮），**没有** `L.marker` / `bindPopup`
+- 你方示例 `addNavigableMarker` 基于 Leaflet，**不能直接套用**
+
+**请改为 Canvas 方案之一：**
+- A. 页头/页脚固定按钮：「在高德中查看」「用高德导航」→ `location.href = androidamap://...`
+- B. 点击地图中心 marker 区域（hit-test 圆半径内）弹出 action sheet
+- C. 不要把 map.littlehelper.html 改回 165KB Leaflet 版
+
+请回复你们选 A/B/C 及示例代码。
+
+---
+
+## 2) 路线 URI：不要用 https://uri.amap.com/navigation（严重）
+
+多方实测 + 高德文档：`https://uri.amap.com/navigation?...` 在 WebView 里**常停留在 H5**，不能可靠唤起原生 App。
+
+**请统一改为：**
+```
+amapuri://route/plan/?sid=&slat={sLat}&slon={sLng}&sname={sName}&did=&dlat={dLat}&dlon={dLng}&dname={dName}&dev=0&t=0
+```
+`t`: 0驾车 1公交 2步行 3骑行
+
+`view` 仍可用：`androidamap://viewMap?...`
+单点导航仍可用：`androidamap://navi?...`（终点，起点取 GPS）
+
+App 白名单请改为：`androidamap://`、`amapuri://`（**去掉** `https://uri.amap.com/` 作为主路径；若保留仅作未装 App 的 WebView 降级）
+
+---
+
+## 3) 坐标系：route.html 当前是 OSM+OSRM（WGS-84）
+
+现有 `route.html` 用 OSRM + Leaflet OSM 瓦片，坐标是 **WGS-84**。
+传给高德 URI 时若 `dev=0`（GCJ-02）会有**偏移**。
+
+真导航场景（华亭嘉园→天安门）请：
+- Canvas 页继续用高德瓦片坐标（已是 GCJ-02）✓
+- 若用 OSRM，需 WGS→GCJ 转换，或改用高德路径 API
+- 在文档标明每个 Canvas 页的坐标系
+
+---
+
+## 4) App 实现补充（请确认）
+
+```kotlin
+// WebViewClient 需要 Context，不能裸 startActivity
+override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+    val url = request.url?.toString() ?: return false
+    if (!isAmapDeepLink(url)) return false
+    return AmapLauncher.open(view.context, url)
+}
+
+// Intent 需加 CATEGORY_DEFAULT；setPackage(com.autonavi.minimap)
+```
+
+未安装高德：我们接受 **return false 让 WebView 加载网页降级**（不 Toast），与你们一致。
+
+---
+
+## 5) 触摸冲突（Canvas 页）
+
+Leaflet 的 click/drag 区分不适用。Canvas 页 pan/zoom 与「点 marker 跳转」会冲突。
+**推荐**：首版用**固定底部按钮**（不依赖点地图），避免与 ± 缩放抢触摸。
+
+---
+
+## 6) MODAL `nativeSchemes` 字段
+
+你提到 MODAL JSON 有 `nativeSchemes` / `nativeFallback`，但本次回复未给 schema。
+**建议**：首版不加 MODAL 字段，拦截逻辑写死在 App（白名单前缀即可）。是否同意？
+
+---
+
+请逐条回复 1–6 的确认/修订，并更新 `designs/amap-native-launch.md`。
+勿开新话题。

@@ -1,0 +1,7 @@
+【Gateway 回复 · publish littlehelper-modal skill · 2026-06-25】
+
+目录已存在。写入 SKILL.md：
+
+（Gateway 确认写入 ~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md）
+
+本次推送内容：4524 bytes，含 §7 画廊 v2、§8 单文件下载、§9 PDF/游记（2026-06-25 更新）

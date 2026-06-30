@@ -16,6 +16,23 @@ object OpenClawConnectHandshake {
         val ts: Long
     )
 
+    /** hello-ok.policy；未提供字段时使用客户端默认值。 */
+    data class GatewayHelloPolicy(
+        val tickIntervalMs: Long = DEFAULT_TICK_INTERVAL_MS,
+        val maxPayload: Long? = null,
+        val maxBufferedBytes: Long? = null
+    ) {
+        companion object {
+            const val DEFAULT_TICK_INTERVAL_MS = 15_000L
+        }
+    }
+
+    /** Gateway connect 返回 UNAVAILABLE 时的重试提示（如 sidecar 启动中）。 */
+    data class ConnectRetryHint(
+        val retryAfterMs: Long,
+        val reason: String?
+    )
+
     fun parseChallenge(payload: JsonObject?): Challenge? {
         if (payload == null) return null
         val nonce = payload.get("nonce")?.asString ?: return null
@@ -84,6 +101,37 @@ object OpenClawConnectHandshake {
         return responsePayload?.getAsJsonObject("server")?.get("connId")?.asString
     }
 
+    fun extractPolicy(responsePayload: JsonObject?): GatewayHelloPolicy {
+        val policy = responsePayload?.getAsJsonObject("policy") ?: return GatewayHelloPolicy()
+        return GatewayHelloPolicy(
+            tickIntervalMs = policy.get("tickIntervalMs")?.asLong
+                ?: GatewayHelloPolicy.DEFAULT_TICK_INTERVAL_MS,
+            maxPayload = policy.get("maxPayload")?.asLong,
+            maxBufferedBytes = policy.get("maxBufferedBytes")?.asLong
+        )
+    }
+
+    /**
+     * 解析可重试的 connect UNAVAILABLE（如 `details.reason=startup-sidecars`）。
+     * 返回 null 表示不应在握手阶段自动重试。
+     */
+    fun parseConnectRetry(error: JsonObject?): ConnectRetryHint? {
+        if (error == null) return null
+        if (isPairingError(error)) return null
+        val details = error.getAsJsonObject("details")
+        val reason = details?.get("reason")?.asString
+        val message = error.get("message")?.asString.orEmpty()
+        val code = details?.get("code")?.asString ?: error.get("code")?.asString
+        val unavailable = message.contains("UNAVAILABLE", ignoreCase = true) ||
+            code?.contains("UNAVAILABLE", ignoreCase = true) == true ||
+            reason == "startup-sidecars"
+        if (!unavailable) return null
+        val retryAfterMs = details?.get("retryAfterMs")?.asLong
+            ?: error.get("retryAfterMs")?.asLong
+            ?: DEFAULT_CONNECT_RETRY_AFTER_MS
+        return ConnectRetryHint(retryAfterMs = retryAfterMs.coerceAtLeast(0L), reason = reason)
+    }
+
     fun extractDeviceToken(responsePayload: JsonObject?, role: String): String? {
         val auth = responsePayload?.getAsJsonObject("auth") ?: return null
         auth.get("deviceToken")?.asString?.takeIf { it.isNotBlank() }?.let { return it }
@@ -117,4 +165,6 @@ object OpenClawConnectHandshake {
         }
         return message ?: error.toString()
     }
+
+    private const val DEFAULT_CONNECT_RETRY_AFTER_MS = 500L
 }

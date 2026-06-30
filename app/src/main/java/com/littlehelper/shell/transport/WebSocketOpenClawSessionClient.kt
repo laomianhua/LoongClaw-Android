@@ -10,6 +10,7 @@ import com.littlehelper.shell.model.ConnectionState
 import com.littlehelper.settings.AssistantToneStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,11 +42,15 @@ class WebSocketOpenClawSessionClient(
     private val toneStore: AssistantToneStore,
     private val scope: CoroutineScope,
     private val gson: Gson = Gson(),
-    private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .pingInterval(15, TimeUnit.SECONDS)
-        .build()
 ) : OpenClawSessionClient {
+
+    private var helloPolicy: OpenClawConnectHandshake.GatewayHelloPolicy =
+        OpenClawConnectHandshake.GatewayHelloPolicy()
+
+    private fun buildOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .pingInterval(helloPolicy.tickIntervalMs, TimeUnit.MILLISECONDS)
+        .build()
 
     private val _events = MutableSharedFlow<ClawSessionEvent>(extraBufferCapacity = 64)
     override val events: Flow<ClawSessionEvent> = _events.asSharedFlow()
@@ -58,6 +63,7 @@ class WebSocketOpenClawSessionClient(
     private val pendingTalkCreates = ConcurrentHashMap<String, CompletableDeferred<String>>()
 
     private val connectGeneration = AtomicInteger(0)
+    private val connectUnavailableRetries = AtomicInteger(0)
 
     private var webSocket: WebSocket? = null
     private var connectDeferred: CompletableDeferred<String>? = null
@@ -83,13 +89,15 @@ class WebSocketOpenClawSessionClient(
 
         val deferred = CompletableDeferred<String>()
         connectDeferred = deferred
+        connectUnavailableRetries.set(0)
         val connectionGeneration = connectGeneration.incrementAndGet()
 
         val request = Request.Builder()
             .url(config.wsUrl())
             .build()
 
-        webSocket = okHttpClient.newWebSocket(request, GatewayListener(connectionGeneration))
+        val client = buildOkHttpClient()
+        webSocket = client.newWebSocket(request, GatewayListener(connectionGeneration))
 
         try {
             withTimeout(CONNECT_TIMEOUT_MS) {
@@ -382,6 +390,13 @@ class WebSocketOpenClawSessionClient(
 
         if (id == "conn_1") {
             if (ok && OpenClawConnectHandshake.isHelloOk(payload)) {
+                helloPolicy = OpenClawConnectHandshake.extractPolicy(payload)
+                Log.d(
+                    TAG,
+                    "hello-ok policy tickIntervalMs=${helloPolicy.tickIntervalMs} " +
+                        "maxPayload=${helloPolicy.maxPayload} " +
+                        "maxBufferedBytes=${helloPolicy.maxBufferedBytes}"
+                )
                 OpenClawConnectHandshake.extractDeviceToken(payload, config.connectRole)?.let { token ->
                     identityStore.saveDeviceToken(config.connectRole, token)
                     Log.d(TAG, "deviceToken saved for role=${config.connectRole}")
@@ -390,6 +405,22 @@ class WebSocketOpenClawSessionClient(
                 connectDeferred?.complete(connId)
             } else {
                 val errorObj = root.getAsJsonObject("error")
+                val retryHint = OpenClawConnectHandshake.parseConnectRetry(errorObj)
+                if (retryHint != null &&
+                    connectUnavailableRetries.incrementAndGet() <= MAX_CONNECT_UNAVAILABLE_RETRIES
+                ) {
+                    Log.d(
+                        TAG,
+                        "connect UNAVAILABLE reason=${retryHint.reason} " +
+                            "retryAfterMs=${retryHint.retryAfterMs} " +
+                            "attempt=${connectUnavailableRetries.get()}/$MAX_CONNECT_UNAVAILABLE_RETRIES " +
+                            "(await next connect.challenge)"
+                    )
+                    scope.launch {
+                        delay(retryHint.retryAfterMs)
+                    }
+                    return
+                }
                 val deviceId = identityStore.loadOrCreateIdentity().deviceId
                 val pairing = OpenClawConnectHandshake.isPairingError(errorObj)
                 val message = OpenClawConnectHandshake.formatConnectError(errorObj, deviceId)
@@ -449,5 +480,6 @@ class WebSocketOpenClawSessionClient(
         private const val TAG = "OpenClawWS"
         private const val CONNECT_TIMEOUT_MS = 15_000L
         private const val TALK_CREATE_TIMEOUT_MS = 10_000L
+        private const val MAX_CONNECT_UNAVAILABLE_RETRIES = 8
     }
 }

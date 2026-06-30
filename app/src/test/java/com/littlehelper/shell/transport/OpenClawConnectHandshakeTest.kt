@@ -45,6 +45,67 @@ class OpenClawConnectHandshakeTest {
     }
 
     @Test
+    fun extractPolicy_readsHelloOkPolicyFields() {
+        val payload = JsonParser.parseString(
+            """
+            {
+              "type":"hello-ok",
+              "policy":{
+                "tickIntervalMs":15000,
+                "maxPayload":26214400,
+                "maxBufferedBytes":52428800
+              }
+            }
+            """
+        ).asJsonObject
+        val policy = OpenClawConnectHandshake.extractPolicy(payload)
+        assertEquals(15_000L, policy.tickIntervalMs)
+        assertEquals(26_214_400L, policy.maxPayload)
+        assertEquals(52_428_800L, policy.maxBufferedBytes)
+    }
+
+    @Test
+    fun extractPolicy_usesDefaultTickWhenMissing() {
+        val payload = JsonParser.parseString("""{"type":"hello-ok"}""").asJsonObject
+        val policy = OpenClawConnectHandshake.extractPolicy(payload)
+        assertEquals(
+            OpenClawConnectHandshake.GatewayHelloPolicy.DEFAULT_TICK_INTERVAL_MS,
+            policy.tickIntervalMs
+        )
+    }
+
+    @Test
+    fun parseConnectRetry_startupSidecars() {
+        val error = JsonParser.parseString(
+            """
+            {
+              "message":"UNAVAILABLE",
+              "details":{"reason":"startup-sidecars","retryAfterMs":750}
+            }
+            """
+        ).asJsonObject
+        val hint = OpenClawConnectHandshake.parseConnectRetry(error)
+        assertEquals(750L, hint?.retryAfterMs)
+        assertEquals("startup-sidecars", hint?.reason)
+    }
+
+    @Test
+    fun parseConnectRetry_returnsNullForPairing() {
+        val error = JsonParser.parseString(
+            """{"message":"pairing required","details":{"code":"PAIRING_REQUIRED"}}"""
+        ).asJsonObject
+        assertEquals(null, OpenClawConnectHandshake.parseConnectRetry(error))
+    }
+
+    @Test
+    fun parseConnectRetry_returnsNullForNonRetryable() {
+        val error = JsonParser.parseString(
+            """{"message":"device signature invalid"}"""
+        ).asJsonObject
+        assertEquals(null, OpenClawConnectHandshake.parseConnectRetry(error))
+    }
+
+    @Test
     fun extractDeviceToken_readsPrimaryAuthField() {
         val payload = JsonParser.parseString(
             """{"type":"hello-ok","auth":{"deviceToken":"dt-1","role":"operator"}}"""

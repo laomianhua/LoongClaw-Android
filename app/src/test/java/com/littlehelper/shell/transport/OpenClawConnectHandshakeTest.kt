@@ -8,7 +8,7 @@ import org.junit.Test
 class OpenClawConnectHandshakeTest {
 
     @Test
-    fun buildConnectRequest_usesNodeModeOperatorRoleAndSignedDevice() {
+    fun buildConnectRequest_usesUiModeOperatorRoleAndSignedDevice() {
         val config = GatewayConfig(
             host = "192.168.1.55",
             port = 18789,
@@ -33,7 +33,7 @@ class OpenClawConnectHandshakeTest {
         val params = frame.getAsJsonObject("params")
         val client = params.getAsJsonObject("client")
         assertEquals("openclaw-android", client.get("id").asString)
-        assertEquals("node", client.get("mode").asString)
+        assertEquals("ui", client.get("mode").asString)
         assertEquals("operator", params.get("role").asString)
         assertEquals("clawbot-test-2024", params.getAsJsonObject("auth").get("token").asString)
         val device = params.getAsJsonObject("device")

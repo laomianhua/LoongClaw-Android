@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Probe OpenClaw Gateway after pairing: v2 sign, hello-ok, subscribe, send."""
+"""Probe OpenClaw Gateway: v3 sign + ui mode (matches LittleHelper App)."""
 
 import base64
 import hashlib
@@ -43,9 +43,13 @@ def sign(payload: str) -> str:
 
 def build_connect(nonce: str, auth_token: str) -> dict:
     signed_at = int(time.time() * 1000)
+    client_mode = "ui"
+    platform = "android"
+    device_family = "android"
     payload = "|".join([
-        "v2", DEVICE_ID, "openclaw-android", "node", "operator",
+        "v3", DEVICE_ID, "openclaw-android", client_mode, "operator",
         "operator.read,operator.write", str(signed_at), auth_token, nonce,
+        platform, device_family,
     ])
     return {
         "type": "req",
@@ -57,8 +61,9 @@ def build_connect(nonce: str, auth_token: str) -> dict:
             "client": {
                 "id": "openclaw-android",
                 "version": "1.0.0",
-                "platform": "android",
-                "mode": "node",
+                "platform": platform,
+                "mode": client_mode,
+                "deviceFamily": device_family,
             },
             "role": "operator",
             "scopes": ["operator.read", "operator.write"],

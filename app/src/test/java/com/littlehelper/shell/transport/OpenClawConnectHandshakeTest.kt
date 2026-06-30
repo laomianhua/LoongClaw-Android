@@ -34,6 +34,7 @@ class OpenClawConnectHandshakeTest {
         val client = params.getAsJsonObject("client")
         assertEquals("openclaw-android", client.get("id").asString)
         assertEquals("ui", client.get("mode").asString)
+        assertEquals("android", client.get("deviceFamily").asString)
         assertEquals("operator", params.get("role").asString)
         assertEquals("clawbot-test-2024", params.getAsJsonObject("auth").get("token").asString)
         val device = params.getAsJsonObject("device")

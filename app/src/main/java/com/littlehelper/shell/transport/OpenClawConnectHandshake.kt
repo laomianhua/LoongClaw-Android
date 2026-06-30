@@ -7,7 +7,7 @@ import com.google.gson.JsonObject
  *
  * - `client.mode` = `ui`，`role` = `operator`
  * - `auth.token`：已配对用 deviceToken，否则用 gateway 共享 token
- * - `device`：Ed25519 签 v2 payload（含 challenge nonce）
+ * - `device`：Ed25519 签 v3 payload（含 platform、deviceFamily 与 challenge nonce）
  */
 object OpenClawConnectHandshake {
 
@@ -36,8 +36,12 @@ object OpenClawConnectHandshake {
             add("client", JsonObject().apply {
                 addProperty("id", config.clientId)
                 addProperty("version", config.clientVersion)
-                addProperty("platform", config.platform)
+                addProperty("platform", OpenClawDeviceAuth.normalizeMetadataForAuth(config.platform))
                 addProperty("mode", config.clientMode)
+                val deviceFamily = OpenClawDeviceAuth.normalizeMetadataForAuth(config.deviceFamily)
+                if (deviceFamily.isNotEmpty()) {
+                    addProperty("deviceFamily", deviceFamily)
+                }
             })
             addProperty("role", config.connectRole)
             add("scopes", com.google.gson.JsonArray().apply {

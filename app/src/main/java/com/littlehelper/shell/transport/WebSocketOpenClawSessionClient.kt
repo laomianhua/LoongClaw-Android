@@ -57,6 +57,8 @@ class WebSocketOpenClawSessionClient(
     private val requestIdSeq = AtomicInteger(0)
     private val pendingTalkCreates = ConcurrentHashMap<String, CompletableDeferred<String>>()
 
+    private val connectGeneration = AtomicInteger(0)
+
     private var webSocket: WebSocket? = null
     private var connectDeferred: CompletableDeferred<String>? = null
     private var sessionConnId: String? = null
@@ -81,12 +83,13 @@ class WebSocketOpenClawSessionClient(
 
         val deferred = CompletableDeferred<String>()
         connectDeferred = deferred
+        val connectionGeneration = connectGeneration.incrementAndGet()
 
         val request = Request.Builder()
             .url(config.wsUrl())
             .build()
 
-        webSocket = okHttpClient.newWebSocket(request, GatewayListener())
+        webSocket = okHttpClient.newWebSocket(request, GatewayListener(connectionGeneration))
 
         try {
             withTimeout(CONNECT_TIMEOUT_MS) {
@@ -252,7 +255,19 @@ class WebSocketOpenClawSessionClient(
         }
     }
 
-    private fun sendConnect(challenge: OpenClawConnectHandshake.Challenge) {
+    private fun sendConnect(
+        challenge: OpenClawConnectHandshake.Challenge,
+        connectionGeneration: Int,
+        socket: WebSocket
+    ) {
+        if (connectionGeneration != connectGeneration.get()) {
+            Log.d(TAG, "ignore stale connect.challenge gen=$connectionGeneration")
+            return
+        }
+        if (webSocket !== socket) {
+            Log.d(TAG, "ignore connect.challenge for replaced socket")
+            return
+        }
         val identity = identityStore.loadOrCreateIdentity()
         val storedDeviceToken = identityStore.getDeviceToken(config.connectRole)
         val authToken = OpenClawDeviceAuth.resolveAuthToken(config, storedDeviceToken)
@@ -263,6 +278,13 @@ class WebSocketOpenClawSessionClient(
             authToken = authToken,
             identityStore = identityStore
         )
+        val payloadPreview = OpenClawDeviceAuth.buildPayloadV3ForTest(
+            deviceId = identity.deviceId,
+            config = config,
+            signedAtMs = signedDevice.signedAt,
+            authToken = authToken,
+            nonce = challenge.nonce
+        )
         val frame = OpenClawConnectHandshake.buildConnectRequest(
             requestId = "conn_1",
             config = config,
@@ -270,18 +292,25 @@ class WebSocketOpenClawSessionClient(
             signedDevice = signedDevice,
             authToken = authToken
         )
-        webSocket?.send(gson.toJson(frame))
-        Log.d(TAG, "connect sent mode=${config.clientMode} role=${config.connectRole} device=${identity.deviceId.take(12)}…")
+        socket.send(gson.toJson(frame))
+        Log.d(
+            TAG,
+            "connect sent gen=$connectionGeneration mode=${config.clientMode} " +
+                "device=${identity.deviceId.take(12)}… nonce=${challenge.nonce.take(8)}… " +
+                "payload=${payloadPreview.take(56)}…"
+        )
     }
 
-    private inner class GatewayListener : WebSocketListener() {
+    private inner class GatewayListener(
+        private val connectionGeneration: Int
+    ) : WebSocketListener() {
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
             Log.d(TAG, "WebSocket opened: ${config.wsUrl()}")
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            scope.launch { handleIncoming(text) }
+            scope.launch { handleIncoming(text, connectionGeneration, webSocket) }
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -301,21 +330,29 @@ class WebSocketOpenClawSessionClient(
         }
     }
 
-    private suspend fun handleIncoming(text: String) {
+    private suspend fun handleIncoming(
+        text: String,
+        connectionGeneration: Int,
+        socket: WebSocket
+    ) {
         val root = runCatching { JsonParser.parseString(text).asJsonObject }.getOrNull() ?: return
         when (root.get("type")?.asString) {
-            "event" -> handleEvent(root)
+            "event" -> handleEvent(root, connectionGeneration, socket)
             "res" -> handleResponse(root)
         }
     }
 
-    private suspend fun handleEvent(root: JsonObject) {
+    private suspend fun handleEvent(
+        root: JsonObject,
+        connectionGeneration: Int,
+        socket: WebSocket
+    ) {
         val eventName = root.get("event")?.asString ?: return
         val payload = root.getAsJsonObject("payload")
 
         if (eventName == "connect.challenge") {
             val challenge = OpenClawConnectHandshake.parseChallenge(payload) ?: return
-            sendConnect(challenge)
+            sendConnect(challenge, connectionGeneration, socket)
             return
         }
 

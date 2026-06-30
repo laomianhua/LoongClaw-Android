@@ -13,7 +13,7 @@ import java.security.SecureRandom
 class OpenClawDeviceAuthTest {
 
     @Test
-    fun buildPayloadV2_matchesOpenClawPipeFormat() {
+    fun buildPayloadV3_matchesOpenClawPipeFormat() {
         val config = GatewayConfig(
             host = "x",
             port = 1,
@@ -22,7 +22,7 @@ class OpenClawDeviceAuthTest {
             clientMode = "ui",
             connectRole = "operator"
         )
-        val payload = OpenClawDeviceAuth.buildPayloadV2ForTest(
+        val payload = OpenClawDeviceAuth.buildPayloadV3ForTest(
             deviceId = "deviceid",
             config = config,
             signedAtMs = 1_700_000_000_000L,
@@ -30,9 +30,34 @@ class OpenClawDeviceAuthTest {
             nonce = "nonce-1"
         )
         assertEquals(
-            "v2|deviceid|openclaw-android|ui|operator|operator.read,operator.write|1700000000000|clawbot-test-2024|nonce-1",
+            "v3|deviceid|openclaw-android|ui|operator|operator.read,operator.write|1700000000000|clawbot-test-2024|nonce-1|android|android",
             payload
         )
+    }
+
+    @Test
+    fun buildPayloadV3_clientModeMatchesConnectFrame() {
+        val config = GatewayConfig(host = "x", port = 1, password = "pw")
+        val payload = OpenClawDeviceAuth.buildPayloadV3ForTest(
+            deviceId = "deviceid",
+            config = config,
+            signedAtMs = 1_700_000_000_000L,
+            authToken = "tok",
+            nonce = "nonce-1"
+        )
+        // Gateway rebuilds v3 from connect params; 3rd field after clientId must equal client.mode.
+        val parts = payload.split("|")
+        assertEquals("v3", parts[0])
+        assertEquals(config.clientMode, parts[3])
+        assertEquals(config.connectRole, parts[4])
+        assertEquals("android", parts[9])
+        assertEquals("android", parts[10])
+    }
+
+    @Test
+    fun normalizeMetadataForAuth_lowercasesAscii() {
+        assertEquals("android", OpenClawDeviceAuth.normalizeMetadataForAuth("Android"))
+        assertEquals("", OpenClawDeviceAuth.normalizeMetadataForAuth("  "))
     }
 
     @Test

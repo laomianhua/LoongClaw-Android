@@ -9,11 +9,11 @@ data class GatewayConfig(
     val mainSessionKey: String = "agent:main:main",
     val talkMode: String = "ptt",
     val clientId: String = "openclaw-android",
-    /** 带界面 operator 客户端；role 仍为 operator。签名暂用 v2，v3 待 Gateway 验通后再切。 */
+    /** 带界面 operator 客户端；device-auth 使用 v3 签名。 */
     val clientMode: String = "ui",
     val connectRole: String = "operator",
     val platform: String = "android",
-    val deviceFamily: String = "Android",
+    val deviceFamily: String = "android",
     val clientVersion: String = "1.0.0",
     val gatewayToken: String = "",
     val protocolVersion: Int = 4

@@ -1,7 +1,7 @@
 package com.littlehelper.shell.transport
 
 /**
- * Gateway device-auth 签名载荷（OpenClaw gateway-client device-auth v2）。
+ * Gateway device-auth 签名载荷（OpenClaw gateway-client device-auth v3）。
  */
 object OpenClawDeviceAuth {
 
@@ -20,7 +20,7 @@ object OpenClawDeviceAuth {
         identityStore: OpenClawDeviceIdentityStore
     ): SignedDeviceConnect {
         val signedAtMs = System.currentTimeMillis()
-        val payload = buildPayloadV2(
+        val payload = buildPayloadV3(
             deviceId = identity.deviceId,
             config = config,
             signedAtMs = signedAtMs,
@@ -39,15 +39,26 @@ object OpenClawDeviceAuth {
 
     fun operatorScopes(): List<String> = OPERATOR_SCOPES
 
-    internal fun buildPayloadV2ForTest(
+    /** 与 Gateway `normalizeDeviceMetadataForAuth` 一致：ASCII 大写转小写。 */
+    internal fun normalizeMetadataForAuth(value: String): String {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) return ""
+        return buildString(trimmed.length) {
+            for (ch in trimmed) {
+                append(if (ch in 'A'..'Z') (ch.code + 32).toChar() else ch)
+            }
+        }
+    }
+
+    internal fun buildPayloadV3ForTest(
         deviceId: String,
         config: GatewayConfig,
         signedAtMs: Long,
         authToken: String,
         nonce: String
-    ): String = buildPayloadV2(deviceId, config, signedAtMs, authToken, nonce)
+    ): String = buildPayloadV3(deviceId, config, signedAtMs, authToken, nonce)
 
-    private fun buildPayloadV2(
+    private fun buildPayloadV3(
         deviceId: String,
         config: GatewayConfig,
         signedAtMs: Long,
@@ -56,7 +67,7 @@ object OpenClawDeviceAuth {
     ): String {
         val scopes = OPERATOR_SCOPES.joinToString(",")
         return listOf(
-            "v2",
+            "v3",
             deviceId,
             config.clientId,
             config.clientMode,
@@ -64,7 +75,9 @@ object OpenClawDeviceAuth {
             scopes,
             signedAtMs.toString(),
             authToken,
-            nonce
+            nonce,
+            normalizeMetadataForAuth(config.platform),
+            normalizeMetadataForAuth(config.deviceFamily)
         ).joinToString("|")
     }
 }

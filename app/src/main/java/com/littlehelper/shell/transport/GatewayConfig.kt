@@ -9,8 +9,8 @@ data class GatewayConfig(
     val mainSessionKey: String = "agent:main:main",
     val talkMode: String = "ptt",
     val clientId: String = "openclaw-android",
-    /** Gateway schema 仅允许 node/backend；operator 权限走 connectRole。 */
-    val clientMode: String = "node",
+    /** 带界面 operator 客户端；role 仍为 operator。签名暂用 v2，v3 待 Gateway 验通后再切。 */
+    val clientMode: String = "ui",
     val connectRole: String = "operator",
     val platform: String = "android",
     val deviceFamily: String = "Android",

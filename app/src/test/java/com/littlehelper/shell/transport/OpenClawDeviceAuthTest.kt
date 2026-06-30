@@ -19,7 +19,7 @@ class OpenClawDeviceAuthTest {
             port = 1,
             password = "pw",
             clientId = "openclaw-android",
-            clientMode = "node",
+            clientMode = "ui",
             connectRole = "operator"
         )
         val payload = OpenClawDeviceAuth.buildPayloadV2ForTest(
@@ -30,7 +30,7 @@ class OpenClawDeviceAuthTest {
             nonce = "nonce-1"
         )
         assertEquals(
-            "v2|deviceid|openclaw-android|node|operator|operator.read,operator.write|1700000000000|clawbot-test-2024|nonce-1",
+            "v2|deviceid|openclaw-android|ui|operator|operator.read,operator.write|1700000000000|clawbot-test-2024|nonce-1",
             payload
         )
     }

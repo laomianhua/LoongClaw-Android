@@ -5,7 +5,7 @@ import com.google.gson.JsonObject
 /**
  * 构建 OpenClaw Gateway `connect` 请求帧（协议 v4）。
  *
- * - `client.mode` = `node`，`role` = `operator`（Gateway schema 无 client.mode=operator）
+ * - `client.mode` = `ui`，`role` = `operator`
  * - `auth.token`：已配对用 deviceToken，否则用 gateway 共享 token
  * - `device`：Ed25519 签 v2 payload（含 challenge nonce）
  */

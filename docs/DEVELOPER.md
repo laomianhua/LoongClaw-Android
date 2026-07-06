@@ -1,6 +1,6 @@
 # 开发者文档
 
-面向贡献者与 Gateway 联调。普通用户请读 [README.md](../README.md)。
+面向贡献者与 Gateway 联调。普通用户请读 [README.zh.md](../README.zh.md)（中文）或 [README.md](../README.md)（英文）。
 
 ## 文档索引
 
@@ -109,6 +109,6 @@ app/src/main/java/com/littlehelper/
 2. 后台保活依赖前台 Service + 系统省电策略；极端 ROM 仍可能杀进程，回前台自动重连（建议用户省电「无限制」）
 3. WebView 仅支持 URL，不支持 inline HTML
 4. 白板标签冷启动不恢复
-5. 扫码配对、`wss://`：**当前版本不做**（见 [README.md](../README.md)）
+5. 扫码配对、`wss://`：**当前版本不做**（见 [README.zh.md](../README.zh.md)）
 
-完整列表见旧版 README 迁移前的「已知限制」；用户向 FAQ 见 [README.md § 常见问题](../README.md#常见问题)。
+完整列表见旧版 README 迁移前的「已知限制」；用户向 FAQ 见 [README.zh.md § 常见问题](../README.zh.md#常见问题)。

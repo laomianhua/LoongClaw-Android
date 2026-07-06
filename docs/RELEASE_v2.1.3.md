@@ -31,7 +31,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **APK**（本页附件） | 安装到手机。内测可用 `app-debug.apk`；对外建议自行签名后的 release 包 |
+| **loongclaw-android-2.1.3-debug.zip** | 解压得到 `app-debug.apk` 后安装（GitHub Release **不接受 .apk 直传**，须打 zip） |
 | **loongclaw-gateway-bundle-2.1.3.zip** | 在 **Windows Gateway 主机**解压，运行 `install.ps1`（详见 zip 内 README） |
 
 需要：**OpenClaw ≥ 2026.6.9**、Tailscale 或局域网 `ws://`（暂不支持公网 `wss://`）。
@@ -40,7 +40,7 @@
 
 **手机（龙爪 App）**
 
-1. 安装 APK → 首次启动进入 **设置**
+1. 下载 **loongclaw-android-2.1.3-debug.zip** → 解压 → 安装 `app-debug.apk` → 首次启动进入 **设置**
 2. 填写 Gateway 地址、端口 `18789`、Token → **测试握手** → **保存并连接**
 3. 若提示配对：Control UI → Devices → 批准本设备
 
@@ -51,7 +51,7 @@
 3. 重启 Gateway；另开终端：`python %USERPROFILE%\.openclaw\companion\upload_server.py`
 4. `.\doctor.ps1` 全部 `[OK]` 后再用手机连接
 
-完整文档：[README（中文）](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.md) · [README.en.md](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.en.md)
+完整文档：[README（英文）](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.md) · [README.zh.md（中文）](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.zh.md)
 
 ### 本版本亮点
 

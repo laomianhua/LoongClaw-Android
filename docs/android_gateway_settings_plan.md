@@ -336,7 +336,7 @@ fun parseSetupCode(raw: String): QrSetupPayload?
 
 ## 10. 文档同步（v1 已完成）
 
-- [x] 更新 `README.md` § 连接配置：主路径为 App 内设置
+- [x] 更新 `README.zh.md` § 连接配置：主路径为 App 内设置
 - [x] 更新 `OPENCLAW_GATEWAY_CONTRACT.md` §1：Android `agent:main:<UUID>` + `client.id` 路由
 - [x] 更新 `scripts/skills/littlehelper-modal/SKILL.md` 会话说明
 - [x] `local.properties.example` 注明「可选开发者默认，开源用户用 App 内设置」

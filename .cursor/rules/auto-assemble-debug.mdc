@@ -29,7 +29,7 @@ cd d:\Dev\LittleHelper; .\gradlew assembleDebug
 
 ## 不必编译
 
-- 仅改 `scripts/*.py`、`docs/`、`README.md` 且未动 App 源码时，可不跑 Gradle（除非用户要求）。
+- 仅改 `scripts/*.py`、`docs/`、`README.md`、`README.zh.md` 且未动 App 源码时，可不跑 Gradle（除非用户要求）。
 
 ## 安装
 

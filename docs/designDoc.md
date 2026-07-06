@@ -457,7 +457,7 @@ ASR 文本
 | `AMapServiceImpl` 加固 | GeocodeSearch 链、四种出行模式、8s 超时配合 |
 | `MainViewModel` | 聊天优先：不自动展开地图抽屉；`consumeMapInstruction` 合并 SDK 播报 |
 
-详见 [`README.md`](../README.md) 第十～十三阶段与 [AI 意图路由协议](../README.md#ai-意图路由协议) 章节。
+详见 [`README.zh.md`](../README.zh.md) 第十～十三阶段与 [AI 意图路由协议](../README.zh.md#ai-意图路由协议) 章节。
 
 ---
 
@@ -605,4 +605,4 @@ ASR 文本
 | `data/todo/TodoCompletionHelper.kt` | 完成类口语正则 |
 | `DeepSeekService` | 提醒上下文下禁止 QUERY_TODO 消歧 |
 
-详见 [`README.md`](../README.md) [v2.0 版本摘要](../README.md#v20-版本摘要) 与第十四阶段章节。
+详见 [`README.zh.md`](../README.zh.md) [v2.0 版本摘要](../README.zh.md#v20-版本摘要) 与第十四阶段章节。

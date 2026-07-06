@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 LoongClaw for Android（龙爪）开发与真机验收历史。开源用户阅读 [README.md](README.md) 即可。
+本文件记录 LoongClaw for Android（龙爪）开发与真机验收历史。开源用户阅读 [README.md](README.md)（英文）或 [README.zh.md](README.zh.md)（中文）即可。
 
 格式：按日期倒序；较早日程见文末「历史版本」。
 

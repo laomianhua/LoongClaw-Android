@@ -20,7 +20,7 @@
 
 ## 粘贴到 GitHub（Release `v2.1.3`）
 
-**仓库：** [github.com/laomianhua/LittleHelper](https://github.com/laomianhua/LittleHelper)（首次 push 后生效）
+**仓库：** [github.com/laomianhua/LoongClaw-Android](https://github.com/laomianhua/LoongClaw-Android)（首次 push 后生效）
 
 ```markdown
 ## LoongClaw for Android v2.1.3（龙爪）
@@ -51,7 +51,7 @@
 3. 重启 Gateway；另开终端：`python %USERPROFILE%\.openclaw\companion\upload_server.py`
 4. `.\doctor.ps1` 全部 `[OK]` 后再用手机连接
 
-完整文档：[README（中文）](https://github.com/laomianhua/LittleHelper/blob/master/README.md) · [README.en.md](https://github.com/laomianhua/LittleHelper/blob/master/README.en.md)
+完整文档：[README（中文）](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.md) · [README.en.md](https://github.com/laomianhua/LoongClaw-Android/blob/master/README.en.md)
 
 ### 本版本亮点
 
@@ -73,7 +73,7 @@
 
 **laomianhua@agent.qq.com**
 
-完整变更：[CHANGELOG.md](https://github.com/laomianhua/LittleHelper/blob/master/CHANGELOG.md)
+完整变更：[CHANGELOG.md](https://github.com/laomianhua/LoongClaw-Android/blob/master/CHANGELOG.md)
 ```
 
 ---

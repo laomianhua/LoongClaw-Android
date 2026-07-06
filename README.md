@@ -6,7 +6,24 @@
 
 连接你家或云端的 **OpenClaw Gateway**，在手机上聊天、看白板、听 TTS、上传附件、下载 Gateway 生成的文件。语义与多模态由 Gateway 完成，App 负责连接与展示。
 
-![界面参考](docs/UIReferenceDesign.png)
+### 界面预览
+
+真机截屏（v2.1.3）：连接 Gateway 后聊天、设置握手，以及 MODAL 白板与「我的文件」。
+
+| | | |
+|:---:|:---:|:---:|
+| ![启动器](docs/Icon.jpg) | ![主聊天](docs/WelcomPage.jpg) | ![设置](docs/setting.jpg) |
+| 启动器 · 龙爪 | 主聊天与欢迎 | 连接设置与握手 |
+
+| | | |
+|:---:|:---:|:---:|
+| ![天气白板](docs/Weather.jpg) | ![基金估值](docs/Finance.jpg) | ![画廊](docs/Gallery.jpg) |
+| 天气 MODAL | 基金估值白板 | 画廊分类浏览 |
+
+| |
+|:---:|
+| ![我的文件](docs/FileManager.jpg) |
+| 助手端文件管理 |
 
 ---
 

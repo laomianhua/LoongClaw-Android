@@ -10,7 +10,24 @@
 
 Connect to your home or cloud **OpenClaw Gateway** to chat, view MODAL whiteboards, hear TTS, and download files generated on the Gateway. Semantics and multimodal content are handled by the Gateway; the App handles connection and rendering.
 
-![UI reference](docs/UIReferenceDesign.png)
+### UI preview
+
+Real-device screenshots (v2.1.3): chat, Gateway connection, MODAL whiteboards, and My Files.
+
+| | | |
+|:---:|:---:|:---:|
+| ![Launcher](docs/Icon.jpg) | ![Main chat](docs/WelcomPage.jpg) | ![Settings](docs/setting.jpg) |
+| Launcher · LoongClaw | Welcome & chat | Connection & handshake |
+
+| | | |
+|:---:|:---:|:---:|
+| ![Weather](docs/Weather.jpg) | ![Funds](docs/Finance.jpg) | ![Gallery](docs/Gallery.jpg) |
+| Weather MODAL | Fund valuation | Gallery browsing |
+
+| |
+|:---:|
+| ![My Files](docs/FileManager.jpg) |
+| Gateway-side file manager |
 
 ---
 

@@ -10,7 +10,7 @@ class VolcAsrBinaryProtocolTest {
     @Test
     fun buildFullClientRequest_startsWithProtocolHeader() {
         val frame = VolcAsrBinaryProtocol.buildFullClientRequest(
-            appId = "REDACTED_VOLC_APPID",
+            appId = "test-app-id",
             token = "test-token",
             cluster = "volcengine_streaming_common",
             reqId = "req-1",

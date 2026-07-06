@@ -11,6 +11,8 @@ local.properties.*
 .DS_Store
 /build/
 app/build/
+**/build/generated/
+**/BuildConfig.java
 /captures
 .externalNativeBuild
 .cxx

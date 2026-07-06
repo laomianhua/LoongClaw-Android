@@ -1,6 +1,7 @@
 package com.littlehelper.shell.transport
 
 import com.google.gson.JsonObject
+import com.littlehelper.settings.GatewayAuthMode
 
 /**
  * 构建 OpenClaw Gateway `connect` 请求帧（协议 v4）。
@@ -40,6 +41,21 @@ object OpenClawConnectHandshake {
         return Challenge(nonce = nonce, ts = ts)
     }
 
+    data class ConnectAuthParams(
+        val token: String?,
+        val password: String?
+    )
+
+    /** 按用户设置的认证方式构建 connect.auth（Token 只发 token，Password 只发 password）。 */
+    fun buildConnectAuth(config: GatewayConfig, authCredential: String): ConnectAuthParams {
+        val value = authCredential.takeIf { it.isNotBlank() }
+        return when (config.authMode) {
+            GatewayAuthMode.TOKEN -> ConnectAuthParams(token = value, password = null)
+            GatewayAuthMode.PASSWORD -> ConnectAuthParams(token = null, password = value)
+            GatewayAuthMode.NONE -> ConnectAuthParams(token = null, password = null)
+        }
+    }
+
     fun buildConnectRequest(
         requestId: String,
         config: GatewayConfig,
@@ -67,12 +83,10 @@ object OpenClawConnectHandshake {
             add("caps", com.google.gson.JsonArray())
             add("commands", com.google.gson.JsonArray())
             add("permissions", JsonObject())
+            val authParams = buildConnectAuth(config, authToken)
             add("auth", JsonObject().apply {
-                addProperty("token", authToken)
-                val sharedSecret = config.gatewayToken.ifBlank { config.password }
-                if (sharedSecret.isNotBlank()) {
-                    addProperty("password", config.password.ifBlank { sharedSecret })
-                }
+                authParams.token?.let { addProperty("token", it) }
+                authParams.password?.let { addProperty("password", it) }
             })
             addProperty("locale", "zh-CN")
             addProperty("userAgent", "${config.clientId}/${config.clientVersion}")
@@ -144,27 +158,16 @@ object OpenClawConnectHandshake {
         return null
     }
 
-    fun isPairingError(error: JsonObject?): Boolean {
-        if (error == null) return false
-        val message = error.get("message")?.asString
-        val code = error.getAsJsonObject("details")?.get("code")?.asString
-            ?: error.get("code")?.asString
-        return code?.contains("PAIR", ignoreCase = true) == true ||
-            code == "NOT_PAIRED" ||
-            message?.contains("pairing", ignoreCase = true) == true ||
-            message?.contains("not approved", ignoreCase = true) == true ||
-            message?.contains("NOT_PAIRED", ignoreCase = true) == true
-    }
+    fun isPairingError(error: JsonObject?): Boolean =
+        GatewayConnectErrorMapper.isApprovalRequired(error)
 
-    fun formatConnectError(error: JsonObject?, deviceId: String? = null): String {
-        if (error == null) return "connect rejected"
-        val message = error.get("message")?.asString
-        if (isPairingError(error)) {
-            val idLine = deviceId?.takeIf { it.isNotBlank() }?.let { "\n设备 ID：$it" }.orEmpty()
-            return "设备待配对：请在 Gateway Control UI 批准此设备$idLine"
-        }
-        return message ?: error.toString()
-    }
+    fun formatConnectError(
+        error: JsonObject?,
+        deviceId: String? = null,
+        hasStoredDeviceToken: Boolean = false,
+    ): String = GatewayConnectErrorMapper
+        .mapGatewayError(error, deviceId, hasStoredDeviceToken)
+        .testResultMessage(deviceId)
 
     private const val DEFAULT_CONNECT_RETRY_AFTER_MS = 500L
 }

@@ -18,9 +18,6 @@ interface OpenClawSessionClient {
     /** Stage 1：向已订阅 session 发送文本（语音经本地 ASR 转写后走此路径）。 */
     suspend fun sendTextMessage(text: String)
 
-    /** 将语气/人设指令同步到 Gateway（sessions.patch，失败时 fallback 发设置消息）。 */
-    suspend fun syncAssistantInstructions(instructions: String)
-
     suspend fun startTurn(turnId: String)
     suspend fun sendAudioChunk(turnId: String, seq: Int, chunk: ByteArray)
     suspend fun endTurn(turnId: String, durationMs: Long)

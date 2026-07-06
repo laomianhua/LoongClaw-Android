@@ -108,8 +108,9 @@ object LittleHelperFileSaver {
 
     private fun queryDownloadExists(resolver: android.content.ContentResolver, name: String): Boolean {
         val projection = arrayOf(MediaStore.Downloads._ID)
-        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME}=? AND ${MediaStore.MediaColumns.RELATIVE_PATH}=?"
-        val args = arrayOf(name, LittleHelperDownloadPaths.RELATIVE_PATH)
+        val selection =
+            "${MediaStore.MediaColumns.DISPLAY_NAME}=? AND ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+        val args = arrayOf(name, "${LittleHelperDownloadPaths.RELATIVE_PATH.trimEnd('/')}%")
         resolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             projection,

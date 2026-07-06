@@ -1,0 +1,19 @@
+{
+  "clients": {
+    "openclaw-android": {
+      "profile": "mobile_app",
+      "modalLayout": "compact",
+      "description": "LittleHelper Android App — MODAL 手机紧凑版"
+    },
+    "loongclaw-desktop": {
+      "profile": "pc_desktop",
+      "modalLayout": "wide",
+      "description": "LoongClaw PC — MODAL 大屏版（规划中）"
+    }
+  },
+  "agentRoutingPriority": [
+    "trusted metadata.client.profile",
+    "sender untrusted label (openclaw-android / loongclaw-desktop)",
+    "never infer reply format from channel=webchat or session_status.active.channel alone"
+  ]
+}

@@ -3,7 +3,7 @@
 Cursor ↔ OpenClaw Gateway 开发协调通道（与 App 用户 session 隔离）。
 
 约定：
-- Session key: agent:main:cursor-dev（勿与 App 的 agent:main:main 混用）
+- Session key: agent:main:cursor-dev（勿与 App 的 agent:main:<UUID> 混用）
 - 每个话题由 Cursor 脚本发起 sessions.send；Gateway Agent 只回复，不主动开新话题
 - 输出打印到 stdout，便于在 Cursor 终端反显
 
@@ -247,7 +247,7 @@ def main() -> int:
 
     print("=== OpenClaw Dev Session (Cursor <-> Gateway) ===")
     print(f"gateway   = ws://{host}:{port}")
-    print(f"session   = {SESSION_KEY}  (App uses agent:main:main)")
+    print(f"session   = {SESSION_KEY}  (App uses agent:main:<UUID> via client.id=openclaw-android)")
     print(f"device.id = {device_id} ({identity_label})")
     print(f"auth      = {'deviceToken(saved)' if load_device_token(token_file) else 'shared-token'}")
     print(

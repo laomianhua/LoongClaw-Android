@@ -1,0 +1,14 @@
+【LittleHelper 真机结论同步】
+App 回滚 session 为 agent:main:main 后，白板 MODAL 可正常弹出且 Canvas WebView 内容可展示（手机走 Tailscale，开发机走 LAN 192.168.1.55）。
+
+此前 App 使用 agent:main:<UUID> 时出现：
+1) 黄条「白板内容解析失败」
+2) 或白板弹出但 WebView 显示 {"error":{"message":"Unauthorized"}}
+
+请确认并回复：
+A) 你下发 MODAL 时是否默认路由到 agent:main:main，而非手机连接的 sessionKey？
+B) littlehelper-modal skill 按 client.id=openclaw-android 还是按 sessionKey 路由？
+C) Canvas /__openclaw__/canvas/ HTTP 鉴权应认 shared gateway token 还是 deviceToken？
+D) 若 App 必须用独立 UUID session，Gateway 侧需要改什么？请给可执行清单。
+
+App 当前临时方案：session 固定 main，等你方确认后再讨论 UUID。

@@ -33,7 +33,7 @@ import com.littlehelper.shell.modules.renderers.TableBlockRenderer
 import com.littlehelper.shell.modules.renderers.modalBlockUsesFillHeightWebView
 import com.littlehelper.shell.modules.renderers.WebViewBlockRenderer
 import com.littlehelper.shell.transport.GatewayCanvasAuth
-import com.littlehelper.shell.transport.GatewayConfig
+import com.littlehelper.shell.transport.GatewayRuntime
 import com.littlehelper.ui.theme.AppColors
 
 /**
@@ -42,13 +42,13 @@ import com.littlehelper.ui.theme.AppColors
 @Composable
 fun ModalCanvasHost(
     blocks: List<ModalBlock>,
-    gatewayBaseUrl: String = GatewayConfig.fromBuildConfig().httpBaseUrl(),
+    gatewayBaseUrl: String = GatewayRuntime.httpBaseUrl(),
     loadRevision: Long = 0L,
     onOpenAmap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val gatewayAuthToken = remember { GatewayCanvasAuth.resolveCanvasHttpToken() }
+    val gatewayAuthToken = GatewayCanvasAuth.resolveCanvasHttpToken()
     if (blocks.isEmpty()) {
         ModalCanvasEmptyState(modifier = modifier)
         return

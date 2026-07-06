@@ -37,7 +37,9 @@ object MessageBlockParser {
 
         val chatText = when {
             chatIndex >= 0 && modalIndex >= 0 && chatIndex < modalIndex ->
-                normalized.substring(chatIndex + MARKER_CHAT.length, modalIndex).trim()
+                normalized.substring(chatIndex + MARKER_CHAT.length, modalIndex)
+                    .replace(MARKER_END, "")
+                    .trim()
             chatIndex >= 0 ->
                 normalized.substring(chatIndex + MARKER_CHAT.length).trim()
             else -> ""
@@ -57,7 +59,8 @@ object MessageBlockParser {
             return ParseResult(chatText = chatText.ifBlank { normalized.trim() })
         }
 
-        val modalJson = normalized.substring(modalIndex + MARKER_MODAL.length).trim()
+        val modalSection = normalized.substring(modalIndex + MARKER_MODAL.length)
+        val modalJson = extractModalJsonFromSection(modalSection)
         val modal = parseModalJson(modalJson)
         return ParseResult(
             chatText = chatText,
@@ -76,7 +79,6 @@ object MessageBlockParser {
             buildString {
                 append(MARKER_CHAT).append('\n').append(chatText.trim()).append("\n\n")
                 append(MARKER_MODAL).append('\n').append(modalJson.trim()).append('\n')
-                append(MARKER_END)
             }
         )
     }
@@ -97,6 +99,35 @@ object MessageBlockParser {
     private fun chatTextBeforeJson(fullAfterChat: String, parsed: ParseResult): String {
         val candidate = findModalJsonCandidate(fullAfterChat) ?: return fullAfterChat.trim()
         return fullAfterChat.replace(candidate, "").trim()
+    }
+
+    internal fun extractModalJsonFromSection(section: String): String {
+        val trimmed = stripMarkdownCodeFences(section.trim())
+        findModalJsonCandidate(trimmed)?.let { return it }
+        val start = trimmed.indexOf('{')
+        if (start >= 0) {
+            extractBalancedJson(trimmed, start)?.let { return it }
+        }
+        return trimmed
+    }
+
+    internal fun stripMarkdownCodeFences(text: String): String {
+        val trimmed = text.trim()
+        if (!trimmed.startsWith("```")) return trimmed
+        val lines = trimmed.lines()
+        if (lines.isEmpty()) return trimmed
+        val first = lines.first().trim()
+        if (!first.matches(Regex("^```(?:json)?\\s*$", RegexOption.IGNORE_CASE))) return trimmed
+        val endIdx = lines.indexOfLast { it.trim() == "```" }
+        if (endIdx <= 0) return trimmed
+        return lines.subList(1, endIdx).joinToString("\n").trim()
+    }
+
+    /** MODAL 段内是否已有可解析的完整 JSON（流式阶段用）。 */
+    fun hasCompleteModalPayload(raw: String): Boolean {
+        if (!hasModalDirective(raw)) return false
+        val parsed = parse(raw)
+        return parsed.modalAction != null && parsed.modalParseError == null
     }
 
     internal fun findModalJsonCandidate(text: String): String? {
@@ -153,8 +184,11 @@ object MessageBlockParser {
     }
 
     private fun stripEndMarker(text: String): String {
-        val endIndex = text.indexOf(MARKER_END)
-        return if (endIndex >= 0) text.substring(0, endIndex) else text
+        var result = text.trimEnd()
+        while (result.endsWith(MARKER_END)) {
+            result = result.removeSuffix(MARKER_END).trimEnd()
+        }
+        return result
     }
 
     private data class ModalJsonResult(
@@ -269,7 +303,7 @@ object MessageBlockParser {
     }
 }
 
-/** 流式防抖：累积 delta，仅在 END 标记或 finalize 时解析 MODAL。 */
+/** 流式防抖：累积 delta，JSON 完整或 finalize 时解析 MODAL。 */
 class StreamingMessageBlockParser {
 
     private val buffer = StringBuilder()
@@ -291,11 +325,7 @@ class StreamingMessageBlockParser {
 
     fun partialChatPreview(): String? {
         val text = buffer.toString()
-        if (!text.contains(MessageBlockParser.MARKER_END) &&
-            !MessageBlockParser.hasModalDirective(text)
-        ) {
-            return null
-        }
+        if (!MessageBlockParser.hasModalDirective(text)) return null
         return MessageBlockParser.parse(text).chatText.takeIf { it.isNotBlank() }
     }
 
@@ -308,12 +338,8 @@ class StreamingMessageBlockParser {
 
     fun tryParseIfComplete(): MessageBlockParser.ParseResult? {
         val text = buffer.toString()
-        if (text.contains(MessageBlockParser.MARKER_END)) {
-            return finalize()
-        }
-        if (!MessageBlockParser.hasModalDirective(text)) return null
+        if (!MessageBlockParser.hasCompleteModalPayload(text)) return null
         val parsed = MessageBlockParser.parse(text)
-        if (parsed.modalParseError != null || parsed.modalAction == null) return null
         buffer.clear()
         return parsed
     }

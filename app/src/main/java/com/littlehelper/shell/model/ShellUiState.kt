@@ -3,7 +3,7 @@ package com.littlehelper.shell.model
 import com.littlehelper.ChatMessage
 import com.littlehelper.PanelState
 import com.littlehelper.shell.modal.ModalState
-import com.littlehelper.shell.modal.ModalHistoryState
+import com.littlehelper.shell.modal.ModalSlotState
 
 data class ShellUiState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
@@ -18,10 +18,14 @@ data class ShellUiState(
     val capturePhase: CapturePhase = CapturePhase.IDLE,
     val speakingMessageId: String? = null,
     val bannerError: String? = null,
+    val bannerErrorDetail: String? = null,
+    val connectFailureKind: com.littlehelper.shell.transport.ConnectFailureKind? = null,
+    val connectGatewayCode: String? = null,
+    val connectUserAction: String? = null,
     val deviceId: String? = null,
     val pairingRequired: Boolean = false,
     val modalState: ModalState = ModalState(),
-    val modalHistory: ModalHistoryState = ModalHistoryState(),
+    val modalSlots: ModalSlotState = ModalSlotState(),
     val modalParseWarning: String? = null,
     val streamingAssistantRaw: String? = null,
     val connectionBannerVisible: Boolean = true,

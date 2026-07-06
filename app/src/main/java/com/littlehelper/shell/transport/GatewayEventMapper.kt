@@ -3,7 +3,6 @@ package com.littlehelper.shell.transport
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.littlehelper.ChatRole
-import com.littlehelper.settings.AssistantToneMessage
 import com.littlehelper.shell.model.ClawIntent
 import com.littlehelper.shell.model.ClawIntentPreload
 import com.littlehelper.shell.model.ClawSessionEvent
@@ -92,7 +91,16 @@ object GatewayEventMapper {
 
     /** payload.modal 与 deltaText 分轨时：短摘要可进 CHAT，表格类正文不进气泡。 */
     private fun resolveChatForModalWire(joinedChat: String, deltaText: String): String {
-        if (joinedChat.isNotBlank()) return joinedChat
+        val chatOnly = when {
+            joinedChat.contains(MessageBlockParser.MARKER_CHAT) ||
+                joinedChat.contains(MessageBlockParser.MARKER_MODAL) -> {
+                MessageBlockParser.extractStreamingChatPreview(joinedChat).ifBlank {
+                    MessageBlockParser.parse(joinedChat).chatText
+                }
+            }
+            else -> joinedChat.trim()
+        }
+        if (chatOnly.isNotBlank()) return chatOnly
         if (deltaText.isBlank() || MessageBlockParser.hasModalDirective(deltaText)) return ""
         if (MessageBlockParser.looksLikeStructuredContentDump(deltaText)) return ""
         return MessageBlockParser.chatDisplayText(deltaText).ifBlank {
@@ -136,11 +144,7 @@ object GatewayEventMapper {
             }
             return null
         }
-        val text = if (role == ChatRole.USER) {
-            AssistantToneMessage.stripEmbeddedTonePrefix(rawText)
-        } else {
-            rawText
-        }
+        val text = rawText
         val isFinal = payload.get("final")?.asBoolean
             ?: envelope.get("final")?.asBoolean
             ?: true

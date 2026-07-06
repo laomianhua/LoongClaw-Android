@@ -5,26 +5,32 @@ import com.littlehelper.shell.modules.StoredImageAsset
 import com.littlehelper.shell.modules.StoredImageDownloadUrlResolver
 import com.littlehelper.shell.transport.GatewayCanvasAuth
 import com.littlehelper.shell.transport.GatewayConfig
-import com.littlehelper.upload.FileUploadManager
+import com.littlehelper.shell.transport.GatewayRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class StoredFileDownloader(
-    private val gatewayBaseUrl: String = GatewayConfig.fromBuildConfig().httpBaseUrl(),
-    private val authToken: String = GatewayCanvasAuth.resolveCanvasHttpToken(),
-    private val client: OkHttpClient = FileUploadManager.defaultClient()
+    private val gatewayBaseUrl: String = GatewayRuntime.httpBaseUrl(),
+    private val uploadHost: String = GatewayRuntime.uploadHost(),
+    private val client: OkHttpClient = downloadClient()
 ) {
 
     suspend fun downloadBytes(asset: StoredImageAsset): ByteArray = withContext(Dispatchers.IO) {
-        val url = StoredImageDownloadUrlResolver.resolve(asset.downloadUrl, gatewayBaseUrl)
+        val url = StoredImageDownloadUrlResolver.resolve(
+            asset.downloadUrl,
+            gatewayBaseUrl,
+            uploadHost = uploadHost,
+        )
+        val token = GatewayCanvasAuth.resolveCanvasHttpToken()
         val requestBuilder = Request.Builder().url(url).get()
-        if (authToken.isNotBlank() &&
-            GatewayCanvasAuth.shouldInjectAuth(url, gatewayBaseUrl, mapOf("Authorization" to "Bearer $authToken"))
+        if (token.isNotBlank() &&
+            GatewayCanvasAuth.shouldInjectAuth(url, gatewayBaseUrl, mapOf("Authorization" to "Bearer $token"))
         ) {
-            requestBuilder.header("Authorization", "Bearer $authToken")
+            requestBuilder.header("Authorization", "Bearer $token")
         }
         client.newCall(requestBuilder.build()).execute().use { response ->
             val body = response.body?.bytes()
@@ -46,11 +52,23 @@ class StoredFileDownloader(
             val primary = runCatching { downloadAndSave(context, asset) }
             if (primary.isSuccess) return@withContext primary
 
-            val fileId = asset.fileId.trim()
-            if (fileId.isNotEmpty() && !asset.downloadUrl.trim().startsWith("/files/")) {
-                val fallback = asset.copy(downloadUrl = "/files/$fileId")
-                val retry = runCatching { downloadAndSave(context, fallback) }
-                if (retry.isSuccess) return@withContext retry
+            // 兜底：用 storageFileName 直接拼 18889 下载路径，比 fileId 更可靠
+            val storageName = asset.storageFileName.trim()
+            if (storageName.isNotEmpty() && storageName.contains('.')) {
+                val fallbackUrl =
+                    "http://$uploadHost:${GatewayConfig.UPLOAD_PORT}" +
+                        "/file/download/${storageName}"
+                if (fallbackUrl != StoredImageDownloadUrlResolver.resolve(
+                        asset.downloadUrl,
+                        gatewayBaseUrl,
+                        uploadHost = uploadHost,
+                    )
+                ) {
+                    val retry = runCatching {
+                        downloadAndSave(context, asset.copy(downloadUrl = fallbackUrl))
+                    }
+                    if (retry.isSuccess) return@withContext retry
+                }
             }
             primary
         }
@@ -64,6 +82,15 @@ class StoredFileDownloader(
             storageFileName = asset.storageFileName,
             mimeType = asset.mimeType
         ).getOrThrow()
+    }
+
+    companion object {
+        /** 专为文件下载设计的短超时客户端，避免因上传超时（120s）导致用户等待过久。 */
+        fun downloadClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build()
     }
 }
 

@@ -1,7 +1,6 @@
 package com.littlehelper.shell.modules
 
-import com.littlehelper.upload.FileUploadManager
-import com.littlehelper.BuildConfig
+import com.littlehelper.shell.transport.GatewayConfig
 
 /**
  * 将 Agent 下发的 `downloadUrl` 解析为 App 可 GET 的绝对地址。
@@ -10,21 +9,26 @@ import com.littlehelper.BuildConfig
  */
 object StoredImageDownloadUrlResolver {
 
-    fun resolve(rawDownloadUrl: String, gatewayBaseUrl: String): String {
-        val trimmed = normalizeHostPlaceholder(rawDownloadUrl.trim())
+    fun resolve(
+        rawDownloadUrl: String,
+        gatewayBaseUrl: String,
+        uploadHost: String = gatewayHostFromBaseUrl(gatewayBaseUrl),
+        uploadPort: Int = GatewayConfig.UPLOAD_PORT,
+    ): String {
+        val trimmed = normalizeHostPlaceholder(rawDownloadUrl.trim(), uploadHost)
         require(trimmed.isNotEmpty()) { "downloadUrl 为空" }
 
         if (trimmed.startsWith("http://", ignoreCase = true) ||
             trimmed.startsWith("https://", ignoreCase = true)
         ) {
-            return rewriteAbsoluteDownloadUrl(trimmed, gatewayBaseUrl)
+            return rewriteAbsoluteDownloadUrl(trimmed, gatewayBaseUrl, uploadHost, uploadPort)
         }
 
         if (trimmed.startsWith("/files/")) {
-            return "http://${BuildConfig.OPENCLAW_GATEWAY_HOST}:${FileUploadManager.UPLOAD_PORT}$trimmed"
+            return "http://$uploadHost:$uploadPort$trimmed"
         }
 
-        rewriteCanvasPathToUploadDownload(trimmed)?.let { return it }
+        rewriteCanvasPathToUploadDownload(trimmed, uploadHost, uploadPort)?.let { return it }
 
         val base = gatewayBaseUrl.trim().trimEnd('/')
         require(base.isNotEmpty()) { "Gateway 基址未配置" }
@@ -32,16 +36,21 @@ object StoredImageDownloadUrlResolver {
         return base + path
     }
 
-    private fun rewriteAbsoluteDownloadUrl(absoluteUrl: String, gatewayBaseUrl: String): String {
+    private fun rewriteAbsoluteDownloadUrl(
+        absoluteUrl: String,
+        gatewayBaseUrl: String,
+        uploadHost: String,
+        uploadPort: Int,
+    ): String {
         val schemeEnd = absoluteUrl.indexOf("://")
         if (schemeEnd < 0) return absoluteUrl
         val pathStart = absoluteUrl.indexOf('/', schemeEnd + 3)
         if (pathStart < 0) return absoluteUrl
         val path = absoluteUrl.substring(pathStart)
         if (path.startsWith("/files/")) {
-            return "http://${BuildConfig.OPENCLAW_GATEWAY_HOST}:${FileUploadManager.UPLOAD_PORT}$path"
+            return "http://$uploadHost:$uploadPort$path"
         }
-        rewriteCanvasPathToUploadDownload(path)?.let { return it }
+        rewriteCanvasPathToUploadDownload(path, uploadHost, uploadPort)?.let { return it }
         val base = gatewayBaseUrl.trim().trimEnd('/')
         if (base.isEmpty()) return absoluteUrl
         if (path.contains("/__openclaw__/")) {
@@ -51,19 +60,33 @@ object StoredImageDownloadUrlResolver {
     }
 
     /** Gateway 误把 gallery downloadUrl 指到 canvas 静态路径时，改走 18889 原图下载。 */
-    internal fun rewriteCanvasPathToUploadDownload(path: String): String? {
+    internal fun rewriteCanvasPathToUploadDownload(
+        path: String,
+        uploadHost: String,
+        uploadPort: Int = GatewayConfig.UPLOAD_PORT,
+    ): String? {
         val normalized = path.substringBefore('?').substringBefore('#')
         if (!normalized.contains("/__openclaw__/canvas/")) return null
         val fileName = normalized.substringAfterLast('/').trim()
         if (fileName.isEmpty() || !fileName.contains('.')) return null
         val encoded = java.net.URLEncoder.encode(fileName, Charsets.UTF_8.name())
             .replace("+", "%20")
-        return "http://${BuildConfig.OPENCLAW_GATEWAY_HOST}:${FileUploadManager.UPLOAD_PORT}/file/download/$encoded"
+        return "http://$uploadHost:$uploadPort/file/download/$encoded"
     }
 
     /** Gateway gallery 模板在 JS 替换 __HOST__ 前 App 可能已读到元数据。 */
-    internal fun normalizeHostPlaceholder(url: String): String {
+    internal fun normalizeHostPlaceholder(url: String, uploadHost: String): String {
         if (!url.contains("__HOST__", ignoreCase = true)) return url
-        return url.replace("__HOST__", BuildConfig.OPENCLAW_GATEWAY_HOST, ignoreCase = true)
+        return url.replace("__HOST__", uploadHost, ignoreCase = true)
+    }
+
+    private fun gatewayHostFromBaseUrl(gatewayBaseUrl: String): String {
+        val trimmed = gatewayBaseUrl.trim()
+        val schemeEnd = trimmed.indexOf("://")
+        if (schemeEnd < 0) return trimmed.substringBefore(':')
+        val hostStart = schemeEnd + 3
+        val pathStart = trimmed.indexOf('/', hostStart)
+        val hostPort = if (pathStart < 0) trimmed.substring(hostStart) else trimmed.substring(hostStart, pathStart)
+        return hostPort.substringBefore(':')
     }
 }

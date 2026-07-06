@@ -143,6 +143,72 @@ class GatewayEventMapperTest {
     }
 
     @Test
+    fun sessionMessage_splitModalPayload_overridesBrokenWireInText() {
+        val modalJson = """
+            {"action":"open","blocks":[{"id":"t1-static","type":"webview","title":"T1 静态 WebView","data":{"url":"/__openclaw__/canvas/t1_static.html","scrollable":false,"fillHeight":true}}]}
+        """.trimIndent()
+        val json = """
+            {"type":"event","event":"session.message","payload":{
+              "messageId":"m-t1-split",
+              "modal":$modalJson,
+              "message":{"role":"assistant","content":[
+                {"type":"text","text":"===CHAT===\nT1 静态页已打开。\n\n===MODAL===\n{ broken json"}
+              ]}
+            }}
+        """.trimIndent()
+
+        val event = GatewayEventMapper.mapGatewayMessage(json, "s1") as ClawSessionEvent.ChatFinal
+
+        val next = com.littlehelper.shell.session.SessionReducer.reduce(
+            com.littlehelper.shell.model.ShellUiState(sessionId = "s1"),
+            event
+        )
+        assertTrue(next.modalState.isOpen)
+        assertEquals(null, next.modalParseWarning)
+        assertEquals("T1 静态页已打开。", com.littlehelper.shell.parser.MessageBlockParser.parse(event.text).chatText)
+    }
+
+    @Test
+    fun sessionMessage_t1StaticWireText_parsesWithoutEnd() {
+        val wire = """
+            ===CHAT===
+            T1 静态页已打开。
+
+            ===MODAL===
+            {
+              "action": "open",
+              "blocks": [{
+                "id": "t1-static",
+                "type": "webview",
+                "title": "T1 静态 WebView",
+                "data": {
+                  "url": "/__openclaw__/canvas/t1_static.html",
+                  "scrollable": false,
+                  "fillHeight": true
+                }
+              }]
+            }
+        """.trimIndent()
+        val json = """
+            {"type":"event","event":"session.message","payload":{
+              "messageId":"m-t1-wire",
+              "message":{"role":"assistant","content":[{"type":"text","text":${jsonEscape(wire)}}]}
+            }}
+        """.trimIndent()
+
+        val event = GatewayEventMapper.mapGatewayMessage(json, "s1") as ClawSessionEvent.ChatFinal
+        val next = com.littlehelper.shell.session.SessionReducer.reduce(
+            com.littlehelper.shell.model.ShellUiState(sessionId = "s1"),
+            event
+        )
+        assertTrue(next.modalState.isOpen)
+        assertEquals(null, next.modalParseWarning)
+    }
+
+    private fun jsonEscape(text: String): String =
+        "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
+
+    @Test
     fun tick_isIgnored() {
         val json = """{"type":"event","event":"tick","payload":{}}"""
         assertEquals(null, GatewayEventMapper.mapGatewayMessage(json, "s1"))

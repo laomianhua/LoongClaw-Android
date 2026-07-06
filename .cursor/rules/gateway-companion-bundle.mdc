@@ -1,0 +1,27 @@
+---
+description: Gateway Companion Bundle 分发计划与分工（开源上架）
+globs: docs/GATEWAY_COMPANION_BUNDLE_PLAN.md,gateway-bundle/**/*
+alwaysApply: false
+---
+
+# Gateway Companion Bundle
+
+完整计划：`docs/GATEWAY_COMPANION_BUNDLE_PLAN.md`
+
+## 分工（勿混淆）
+
+- **Gateway / 团队**：从 `~/.openclaw/` export skill、scripts、canvas → 审核合入 repo
+- **Cursor Agent**：以 **repo 为唯一真相源** 制作 manifest / install / doctor / 打包 zip
+- **Gateway Agent**：仅开发期试跑 skill；**不**为用户生成安装包
+
+## 时机
+
+- Companion bundle：install/doctor/build 已就绪；待 harvest + 干净机验收（**非当前主线**）
+- **连接稳定性 Phase B**：前台 `GatewayConnectionService`（见 CHANGELOG）
+- Release 前：CI 打 zip、README 安装指引
+
+## 打包原则
+
+- bundle 与 App **同 tag** 发布（`loongclaw-gateway-bundle-<version>.zip`）
+- install 只做 **copy + openclaw.json 片段 merge + 备份**；禁止覆盖整份用户配置
+- 用户路径：`install` → `doctor` → 重启 Gateway → 装 App

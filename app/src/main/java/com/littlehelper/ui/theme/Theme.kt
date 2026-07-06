@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -16,14 +17,20 @@ private val DarkColorScheme = darkColorScheme(
     background = AppBackground,
     surface = CardBackground,
     onBackground = TextPrimary,
-    onSurface = TextPrimary
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextSecondary,
 )
 
+/** 与主界面 AppColors 一致的浅色语义色，避免设置页 surface 与 onSurface 错位。 */
 private val LightColorScheme = lightColorScheme(
-    background = AppBackground,
-    surface = CardBackground,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
+    primary = Color(0xFF007AFF),
+    background = Color(0xFFF2F2F7),
+    surface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFE5E5EA),
+    onBackground = Color(0xFF1C1C1E),
+    onSurface = Color(0xFF1C1C1E),
+    onSurfaceVariant = Color(0xFF8E8E93),
+    outline = Color(0xFFC7C7CC),
 )
 
 @Composable

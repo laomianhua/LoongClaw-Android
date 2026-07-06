@@ -6,6 +6,8 @@ import com.littlehelper.shell.model.ClawSessionEvent
 
 import com.littlehelper.shell.model.ShellUiState
 
+import com.littlehelper.shell.transport.GatewayConnectErrorMapper
+import com.littlehelper.shell.transport.ConnectErrorPresentation
 import com.littlehelper.shell.transport.OpenClawSessionClient
 
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +76,14 @@ class SessionController(
 
                 bannerError = null,
 
+                bannerErrorDetail = null,
+
+                connectFailureKind = null,
+
+                connectGatewayCode = null,
+
+                connectUserAction = null,
+
                 pairingRequired = false,
 
                 connectionBannerVisible = false,
@@ -90,7 +100,10 @@ class SessionController(
 
 
 
-    fun endSilentRecovery(success: Boolean, errorMessage: String? = null) {
+    fun endSilentRecovery(
+        success: Boolean,
+        error: ConnectErrorPresentation? = null,
+    ) {
 
         silentRecoveryActive = false
 
@@ -104,6 +117,14 @@ class SessionController(
 
                     bannerError = null,
 
+                    bannerErrorDetail = null,
+
+                    connectFailureKind = null,
+
+                    connectGatewayCode = null,
+
+                    connectUserAction = null,
+
                     pairingRequired = false,
 
                     connectionBannerVisible = false,
@@ -114,11 +135,21 @@ class SessionController(
 
 
 
-                errorMessage != null -> state.copy(
+                error != null -> state.copy(
 
                     connectionState = com.littlehelper.shell.model.ConnectionState.DEGRADED,
 
-                    bannerError = errorMessage,
+                    bannerError = error.title,
+
+                    bannerErrorDetail = error.detail,
+
+                    connectFailureKind = error.kind,
+
+                    connectGatewayCode = error.gatewayCode,
+
+                    connectUserAction = error.userAction,
+
+                    pairingRequired = error.pairingRequired,
 
                     connectionBannerVisible = true,
 
@@ -219,6 +250,14 @@ class SessionController(
 
                     bannerError = null,
 
+                    bannerErrorDetail = null,
+
+                    connectFailureKind = null,
+
+                    connectGatewayCode = null,
+
+                    connectUserAction = null,
+
                     pairingRequired = false,
 
                     connectionBannerVisible = true
@@ -268,16 +307,6 @@ class SessionController(
     fun clearAwaitingAssistantReply() {
 
         _shellState.update { it.copy(awaitingAssistantReply = false) }
-
-    }
-
-
-
-    suspend fun syncAssistantInstructions(instructions: String) {
-
-        ensureConnected()
-
-        client.syncAssistantInstructions(instructions)
 
     }
 

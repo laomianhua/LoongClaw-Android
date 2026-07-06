@@ -11,14 +11,14 @@ Gateway skill 镜像：`scripts/skills/littlehelper-modal.md`
 
 ## 改 shell/transport 或 MODAL 解析时
 
-- 助手回复须支持 `===CHAT===` / `===MODAL===` / `===END===` 及 `payload.modal` 分轨
+- 助手回复须支持 `===CHAT===` / `===MODAL===`（**禁止** `===END===`）及 `payload.modal` 分轨
 - webview `data.url` 用相对路径 `/__openclaw__/canvas/...`；App 拼 `gatewayBaseUrl`
 - 地图 canonical：`map.littlehelper.html`（`GatewayCanvasUrlNormalizer`）
 - table：`headers` 为 `{key,label,align}[]`，`rows` 为 `{key:val}[]`
 
 ## 与 Gateway 协调
 
-- 用户会话：`agent:main:main`；开发会话：`agent:main:cursor-dev`
+- 手机用户：**`client.id = openclaw-android`**，会话 **`agent:{name}:main`**（设置页智能体名称；默认 `agent:main:main`）；开发会话：`agent:main:cursor-dev`
 - 推送 skill：`python scripts/publish_littlehelper_gateway_skill.py`
 - 勿在 App 硬编码「webview测试」等本地拦截；Canvas 由 Gateway HTTP 提供
 

@@ -2,7 +2,6 @@ package com.littlehelper.shell.transport
 
 import android.content.Context
 import com.littlehelper.BuildConfig
-import com.littlehelper.settings.AssistantToneStore
 import kotlinx.coroutines.CoroutineScope
 
 object OpenClawSessionClientFactory {
@@ -12,9 +11,8 @@ object OpenClawSessionClientFactory {
             MockOpenClawSessionClient(scope)
         } else {
             WebSocketOpenClawSessionClient(
-                config = GatewayConfig.fromBuildConfig(),
+                initialConfig = GatewayConfigProvider.resolve(context),
                 identityStore = OpenClawDeviceIdentityStore(context),
-                toneStore = AssistantToneStore(context),
                 scope = scope
             )
         }

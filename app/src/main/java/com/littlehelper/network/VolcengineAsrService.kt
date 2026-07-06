@@ -3,7 +3,6 @@ package com.littlehelper.network
 import android.util.Base64
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import com.littlehelper.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -29,14 +28,7 @@ interface AsrService {
 }
 
 /**
- * 火山引擎（ByteDance）语音识别服务，对接"一句话识别"API。
- *
- * 需要在 local.properties（不提交 Git）中配置三个字段：
- *   VOLC_APPID=<你的 AppId>
- *   VOLC_TOKEN=<你的 Token>
- *   VOLC_CLUSTER=<集群名，例如 volcasr_default>
- *
- * API 文档参考：https://www.volcengine.com/docs/6561/80818
+ * 火山引擎（ByteDance）语音识别服务（已停用；保留接口供未来切换）。
  */
 class VolcengineAsrService(
     private val client: OkHttpClient = defaultClient()
@@ -44,80 +36,10 @@ class VolcengineAsrService(
 
     private val gson = Gson()
 
-    override fun hasConfig(): Boolean =
-        BuildConfig.VOLC_APPID.isNotBlank() &&
-            BuildConfig.VOLC_TOKEN.isNotBlank() &&
-            BuildConfig.VOLC_CLUSTER.isNotBlank()
+    override fun hasConfig(): Boolean = false
 
     override suspend fun transcribe(audioFile: File): Result<String> = withContext(Dispatchers.IO) {
-        if (!hasConfig()) {
-            return@withContext Result.failure(
-                IllegalStateException("请在 local.properties 配置 VOLC_APPID / VOLC_TOKEN / VOLC_CLUSTER")
-            )
-        }
-        if (!audioFile.exists() || audioFile.length() == 0L) {
-            return@withContext Result.failure(
-                IllegalStateException("录音文件为空，请重新录一遍")
-            )
-        }
-
-        runCatching {
-            val audioBase64 = Base64.encodeToString(audioFile.readBytes(), Base64.NO_WRAP)
-                        val format = "wav"
-                        val codec = "raw"
-
-                        val token = BuildConfig.VOLC_TOKEN
-
-                        val reqBody = VolcAsrRequest(
-                            app = VolcApp(
-                                appid = BuildConfig.VOLC_APPID,
-                                token = token,
-                                cluster = BuildConfig.VOLC_CLUSTER
-                            ),
-                            user = VolcUser(uid = "littlehelper"),
-                            request = VolcReqMeta(
-                                reqid = UUID.randomUUID().toString(),
-                                nbest = 1,
-                                showUtterances = false,
-                                sequence = -1
-                            ),
-                            audio = VolcAudio(
-                                format = format,
-                                codec = codec,
-                                rate = 16000,
-                                bits = 16,
-                                channel = 1,
-                                encodeType = "base64",
-                                data = audioBase64
-                            )
-                        )
-
-            val jsonBody = gson.toJson(reqBody)
-                .toRequestBody("application/json; charset=utf-8".toMediaType())
-
-            val request = Request.Builder()
-                .url(ASR_URL)
-                .header("Authorization", "Bearer; $token")
-                .post(jsonBody)
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                val body = response.body?.string().orEmpty()
-                android.util.Log.d("VolcengineAsr", "Response: $body")
-                if (!response.isSuccessful) {
-                    throw IllegalStateException(parseHttpError(response.code, body))
-                }
-                val parsed = gson.fromJson(body, VolcAsrResponse::class.java)
-                if (parsed?.code != SUCCESS_CODE) {
-                    throw IllegalStateException(
-                        "语音识别失败（code=${parsed?.code}）：${parsed?.message ?: "未知错误"}"
-                    )
-                }
-                val text = parsed.result?.joinToString("") { it.text.orEmpty() }?.trim().orEmpty()
-                if (text.isEmpty()) throw IllegalStateException("没有识别到内容，请重新录一遍")
-                text
-            }
-        }
+        Result.failure(IllegalStateException("火山 ASR 未配置（当前版本已停用）"))
     }
 
     private fun parseHttpError(code: Int, body: String): String {

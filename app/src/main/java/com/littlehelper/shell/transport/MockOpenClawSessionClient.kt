@@ -61,8 +61,6 @@ class MockOpenClawSessionClient(
         }
     }
 
-    override suspend fun syncAssistantInstructions(instructions: String) = Unit
-
     override suspend fun startTurn(turnId: String) {
         _events.emit(ClawSessionEvent.TurnUploading(turnId))
     }

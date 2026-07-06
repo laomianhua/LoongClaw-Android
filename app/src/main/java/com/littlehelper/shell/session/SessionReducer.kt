@@ -11,8 +11,10 @@ import com.littlehelper.shell.model.ModulePayload
 import com.littlehelper.shell.model.PanelCommand
 import com.littlehelper.shell.model.ShellUiState
 import com.littlehelper.shell.modal.ModalAction
-import com.littlehelper.shell.modal.ModalHistoryReducer
+import com.littlehelper.shell.modal.ModalSlotReducer
+import com.littlehelper.shell.modal.ModalState
 import com.littlehelper.shell.modal.ModalStateReducer
+import com.littlehelper.shell.transport.GatewayRuntime
 import com.littlehelper.shell.parser.MessageBlockParser
 import com.littlehelper.upload.UploadMessageMarker
 
@@ -35,13 +37,37 @@ object SessionReducer {
                     null
                 } else {
                     state.bannerError
-                }
+                },
+                bannerErrorDetail = if (event.state == com.littlehelper.shell.model.ConnectionState.ONLINE) {
+                    null
+                } else {
+                    state.bannerErrorDetail
+                },
+                connectFailureKind = if (event.state == com.littlehelper.shell.model.ConnectionState.ONLINE) {
+                    null
+                } else {
+                    state.connectFailureKind
+                },
+                connectGatewayCode = if (event.state == com.littlehelper.shell.model.ConnectionState.ONLINE) {
+                    null
+                } else {
+                    state.connectGatewayCode
+                },
+                connectUserAction = if (event.state == com.littlehelper.shell.model.ConnectionState.ONLINE) {
+                    null
+                } else {
+                    state.connectUserAction
+                },
             )
 
             is ClawSessionEvent.SessionOpened -> state.copy(
                 sessionId = event.sessionId,
                 connectionState = com.littlehelper.shell.model.ConnectionState.ONLINE,
                 bannerError = null,
+                bannerErrorDetail = null,
+                connectFailureKind = null,
+                connectGatewayCode = null,
+                connectUserAction = null,
                 pairingRequired = false,
                 connectionBannerVisible = false
             )
@@ -64,12 +90,13 @@ object SessionReducer {
             is ClawSessionEvent.SessionError -> state.copy(
                 capturePhase = CapturePhase.IDLE,
                 bannerError = event.message,
+                bannerErrorDetail = event.detail,
+                connectFailureKind = event.failureKind,
+                connectGatewayCode = event.gatewayCode,
+                connectUserAction = event.userAction,
                 pairingRequired = event.pairingRequired,
-                connectionState = if (event.pairingRequired) {
-                    state.connectionState
-                } else {
-                    com.littlehelper.shell.model.ConnectionState.DEGRADED
-                },
+                connectionState = com.littlehelper.shell.model.ConnectionState.DEGRADED,
+                silentReconnectActive = false,
                 streamingMessageId = null,
                 streamingAssistantRaw = null,
                 awaitingAssistantReply = false
@@ -84,6 +111,13 @@ object SessionReducer {
         if (event.text.isBlank() && !event.appendDelta) return state
         val streamingId = streamingIdFor(event.turnId, event.role)
         val existing = state.messages.indexOfFirst { it.id == streamingId }
+        if (event.role == ChatRole.USER && existing < 0) {
+            val echoed = UploadMessageMarker.displayTextForChat(event.text)
+            val lastFinalUser = state.messages.lastOrNull { it.role == ChatRole.USER && !it.isPartial }
+            if (lastFinalUser != null && lastFinalUser.text == echoed) {
+                return state.withLiveGateway()
+            }
+        }
         val mergedText = mergeDeltaText(state, event, existing)
         val displayText = if (event.role == ChatRole.ASSISTANT) {
             MessageBlockParser.chatDisplayText(mergedText)
@@ -273,11 +307,7 @@ object SessionReducer {
      * 流式阶段：JSON 完整（含 END 或裸 JSON）才归约 MODAL，避免半截 JSON 每帧重载白板。
      */
     private fun tryApplyAssistantModalFromRaw(state: ShellUiState, raw: String): ShellUiState {
-        if (!MessageBlockParser.hasModalDirective(raw)) return state
-        if (!raw.contains(MessageBlockParser.MARKER_END)) {
-            val parsed = MessageBlockParser.parse(raw)
-            if (parsed.modalAction == null || parsed.modalParseError != null) return state
-        }
+        if (!MessageBlockParser.hasCompleteModalPayload(raw)) return state
         return applyAssistantModal(state, raw)
     }
 
@@ -287,20 +317,46 @@ object SessionReducer {
             return state.copy(modalParseWarning = "白板内容解析失败，已仅显示文字回复")
         }
         val action = parsed.modalAction ?: return state.copy(modalParseWarning = null)
-        val modalState = ModalStateReducer.apply(
+        val gatewayBaseUrl = com.littlehelper.shell.transport.GatewayRuntime.httpBaseUrl()
+
+        val modalStateFromReducer = ModalStateReducer.apply(
             current = state.modalState,
             action = action,
             incoming = parsed.modalBlocks
         )
-        val modalHistory = when (action) {
-            ModalAction.OPEN, ModalAction.UPDATE ->
-                ModalHistoryReducer.pushSnapshot(state.modalHistory, modalState)
-            ModalAction.CLOSE -> state.modalHistory
-            ModalAction.NOOP -> state.modalHistory
+
+        val modalSlots = when (action) {
+            ModalAction.OPEN, ModalAction.UPDATE -> ModalSlotReducer.openOrUpdate(
+                slots = state.modalSlots,
+                blocks = modalStateFromReducer.blocks,
+                loadRevision = modalStateFromReducer.loadRevision,
+                gatewayBaseUrl = gatewayBaseUrl
+            )
+            ModalAction.CLOSE -> {
+                val closeId = parsed.modalBlocks.firstOrNull()?.id?.takeIf { it.isNotBlank() }
+                ModalSlotReducer.closeTab(state.modalSlots, closeId)
+            }
+            ModalAction.NOOP -> state.modalSlots
         }
+
+        val modalState = when (action) {
+            ModalAction.CLOSE -> {
+                if (modalSlots.isEmpty && ModalSlotReducer.findPrimaryWebViewBlock(state.modalState.blocks) != null) {
+                    ModalState(isOpen = false, loadRevision = state.modalState.loadRevision)
+                } else if (modalSlots.isEmpty) {
+                    modalStateFromReducer
+                } else {
+                    state.modalState.copy(isOpen = true)
+                }
+            }
+            else -> modalStateFromReducer.copy(
+                isOpen = modalStateFromReducer.isOpen || !modalSlots.isEmpty
+            )
+        }
+
         var next = state.copy(
             modalState = modalState,
-            modalHistory = modalHistory,
+            modalSlots = modalSlots,
             modalParseWarning = null
         )
         when (action) {
@@ -310,10 +366,14 @@ object SessionReducer {
                 panelState = PanelState.EXPANDED,
                 pendingPanelCommand = PanelCommand.EXPANDED
             )
-            ModalAction.CLOSE -> next = next.copy(
-                panelState = PanelState.COLLAPSED,
-                pendingPanelCommand = PanelCommand.COLLAPSED
-            )
+            ModalAction.CLOSE -> {
+                if (modalSlots.isEmpty) {
+                    next = next.copy(
+                        panelState = PanelState.COLLAPSED,
+                        pendingPanelCommand = PanelCommand.COLLAPSED
+                    )
+                }
+            }
             ModalAction.UPDATE, ModalAction.NOOP -> Unit
         }
         return next

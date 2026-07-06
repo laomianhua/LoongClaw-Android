@@ -1,0 +1,8 @@
+{
+  "_comment": "Schema-safe fragment only. Merges skills.load.extraDirs into openclaw.json. Do NOT add companion.* or gateway.clients.* — OpenClaw strict config rejects unknown keys. Client whitelist: config/CLIENT_ID_SETUP.md (patch_clientid.ps1).",
+  "skills": {
+    "load": {
+      "extraDirs": ["~/.openclaw/shared-skills"]
+    }
+  }
+}

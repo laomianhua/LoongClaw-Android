@@ -12,6 +12,7 @@ import com.littlehelper.shell.model.ModulePayload
 import com.littlehelper.shell.model.PanelCommand
 import com.littlehelper.shell.model.ShellUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,6 +31,31 @@ class SessionReducerTest {
         )
 
         assertEquals("你好", state.messages.single().text)
+    }
+
+    @Test
+    fun chatDelta_userEcho_skipsWhenOptimisticBubbleExists() {
+        val initial = ShellUiState(
+            messages = listOf(
+                com.littlehelper.ChatMessage(
+                    id = "user-local",
+                    role = ChatRole.USER,
+                    text = "打开文件管理"
+                )
+            )
+        )
+        val event = ClawSessionEvent.ChatDelta(
+            sessionId = "s1",
+            turnId = "m1",
+            role = ChatRole.USER,
+            text = "打开文件管理"
+        )
+
+        val next = SessionReducer.reduce(initial, event)
+
+        assertEquals(1, next.messages.size)
+        assertEquals("打开文件管理", next.messages.single().text)
+        assertFalse(next.messages.single().isPartial)
     }
 
     @Test
@@ -475,5 +501,28 @@ class SessionReducerTest {
             existingIndex = 0
         )
         assertEquals("===CHAT===\nhello", merged)
+    }
+
+    @Test
+    fun sessionError_pairingRequired_clearsSilentReconnectAndMarksDegraded() {
+        val initial = ShellUiState(
+            connectionState = com.littlehelper.shell.model.ConnectionState.CONNECTING,
+            silentReconnectActive = true,
+        )
+        val next = SessionReducer.reduce(
+            initial,
+            ClawSessionEvent.SessionError(
+                message = "设备待配对",
+                detail = "请到 Control UI 批准",
+                pairingRequired = true,
+                failureKind = com.littlehelper.shell.transport.ConnectFailureKind.PAIRING_REQUIRED,
+                gatewayCode = "PAIRING_REQUIRED",
+                userAction = "批准后点上方重试",
+            ),
+        )
+        assertEquals(com.littlehelper.shell.model.ConnectionState.DEGRADED, next.connectionState)
+        assertFalse(next.silentReconnectActive)
+        assertTrue(next.pairingRequired)
+        assertEquals("PAIRING_REQUIRED", next.connectGatewayCode)
     }
 }

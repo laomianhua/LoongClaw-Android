@@ -4,6 +4,6 @@
         name="camera_cache"
         path="camera/" />
     <external-path
-        name="downloads_littlehelper"
-        path="Download/LittleHelper/" />
+        name="downloads_loongclaw"
+        path="Download/LoongClaw/" />
 </paths>

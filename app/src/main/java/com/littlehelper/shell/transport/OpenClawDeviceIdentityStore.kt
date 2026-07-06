@@ -59,6 +59,10 @@ class OpenClawDeviceIdentityStore(context: Context) {
         prefs.edit().putString(deviceTokenKey(role), token).apply()
     }
 
+    fun clearDeviceToken(role: String = OPERATOR_ROLE) {
+        prefs.edit().remove(deviceTokenKey(role)).apply()
+    }
+
     fun signPayload(identity: OpenClawDeviceIdentity, payload: String): String {
         val signer = Ed25519Signer()
         signer.init(true, Ed25519PrivateKeyParameters(identity.privateKeyRaw, 0))

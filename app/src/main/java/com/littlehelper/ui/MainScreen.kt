@@ -2,6 +2,7 @@ package com.littlehelper.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import com.littlehelper.ui.layout.PanelLayout
 import com.littlehelper.shell.model.ShellMode
 import com.littlehelper.shell.projection.ShellUiProjector
 import com.littlehelper.ui.files.MyFilesSheet
+import com.littlehelper.ui.settings.GatewaySettingsSheet
 import com.littlehelper.viewmodel.MainUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,9 +66,15 @@ fun MainScreen(
     onSendComposerText: () -> Unit = {},
     onAttachmentPicked: (ByteArray, String, String) -> Unit = { _, _, _ -> },
     onClearPendingAttachment: () -> Unit = {},
-    onToggleGatewayTts: () -> Unit = {},
-    onNavigateModalHistory: (Int) -> Unit = {},
-    onDeleteModalHistoryPage: () -> Unit = {},
+    onOpenGatewaySettings: () -> Unit = {},
+    onDismissGatewaySettings: () -> Unit = {},
+    onGatewaySettingsFormChange: (com.littlehelper.settings.GatewayConnectionSettings) -> Unit = {},
+    onTestGatewayConnection: () -> Unit = {},
+    onSaveGatewaySettings: () -> Unit = {},
+    onSetGatewayTtsEnabled: (Boolean) -> Unit = {},
+    onSetAppUiLanguage: (com.littlehelper.settings.AppUiLanguage) -> Unit = {},
+    onSelectModalTab: (String) -> Unit = {},
+    onCloseModalTab: (String) -> Unit = {},
     onOpenCanvasAmap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -76,8 +84,12 @@ fun MainScreen(
     val displayMessages = ShellUiProjector.messages(uiState)
     val displayPanelState = ShellUiProjector.panelState(uiState)
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
+            .fillMaxSize()
+    ) {
+    BoxWithConstraints(
+        modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF2F2F7))
             .systemBarsPadding()
@@ -124,9 +136,8 @@ fun MainScreen(
                 } else {
                     null
                 },
-                gatewayTtsEnabled = uiState.gatewayTtsEnabled,
-                onToggleGatewayTts = if (uiState.shellMode == ShellMode.OPENCLAW) {
-                    onToggleGatewayTts
+                onOpenGatewaySettings = if (uiState.shellMode == ShellMode.OPENCLAW) {
+                    onOpenGatewaySettings
                 } else {
                     null
                 },
@@ -153,10 +164,11 @@ fun MainScreen(
                 moduleLoadState = ShellUiProjector.moduleLoadState(uiState),
                 modulePayload = ShellUiProjector.modulePayload(uiState),
                 modalState = ShellUiProjector.modalState(uiState),
-                modalHistory = ShellUiProjector.modalHistory(uiState),
-                onNavigateModalHistory = onNavigateModalHistory,
-                onDeleteModalHistoryPage = onDeleteModalHistoryPage,
+                modalSlots = ShellUiProjector.modalSlots(uiState),
+                onSelectModalTab = onSelectModalTab,
+                onCloseModalTab = onCloseModalTab,
                 onOpenCanvasAmap = onOpenCanvasAmap,
+                gatewayBaseUrl = uiState.gatewayBaseUrl,
                 onRequestExpand = onPanelExpand,
                 onRequestCollapse = onPanelCollapse
             )
@@ -184,6 +196,25 @@ fun MainScreen(
         visible = showMyFiles,
         onDismiss = { showMyFiles = false }
     )
+
+    if (uiState.showGatewaySettings && uiState.shellMode == ShellMode.OPENCLAW) {
+        GatewaySettingsSheet(
+            modifier = Modifier.fillMaxSize(),
+            form = uiState.gatewaySettingsForm,
+            gatewayTtsEnabled = uiState.gatewayTtsEnabled,
+            appUiLanguage = uiState.appUiLanguage,
+            testResult = uiState.gatewayTestResult,
+            handshakeProgress = uiState.gatewayHandshakeProgress,
+            testingConnection = uiState.gatewaySettingsTesting,
+            onFormChange = onGatewaySettingsFormChange,
+            onGatewayTtsChange = onSetGatewayTtsEnabled,
+            onSelectAppUiLanguage = onSetAppUiLanguage,
+            onTestConnection = onTestGatewayConnection,
+            onSaveAndConnect = onSaveGatewaySettings,
+            onDismiss = onDismissGatewaySettings,
+        )
+    }
+    }
 }
 
 @Composable

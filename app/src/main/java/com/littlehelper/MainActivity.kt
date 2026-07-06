@@ -1,6 +1,7 @@
 package com.littlehelper
 
 import android.Manifest
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.content.pm.PackageManager
@@ -19,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.littlehelper.settings.AppLanguageContext
 import com.littlehelper.tts.TtsManager
 import com.littlehelper.ui.MainScreen
 import com.littlehelper.ui.theme.LittleHelperTheme
@@ -31,6 +33,11 @@ class MainActivity : ComponentActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { /* 权限结果在下次操作时再次检查 */ }
+
+    override fun attachBaseContext(newBase: Context) {
+        val localized = runCatching { AppLanguageContext.wrap(newBase) }.getOrDefault(newBase)
+        super.attachBaseContext(localized)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -76,9 +83,17 @@ class MainActivity : ComponentActivity() {
                     onSendComposerText = viewModel::sendComposerText,
                     onAttachmentPicked = viewModel::onAttachmentPicked,
                     onClearPendingAttachment = viewModel::clearPendingAttachment,
-                    onToggleGatewayTts = viewModel::toggleGatewayTts,
-                    onNavigateModalHistory = viewModel::navigateModalHistory,
-                    onDeleteModalHistoryPage = viewModel::deleteCurrentModalHistoryPage,
+                    onOpenGatewaySettings = viewModel::openGatewaySettings,
+                    onDismissGatewaySettings = viewModel::dismissGatewaySettings,
+                    onGatewaySettingsFormChange = viewModel::updateGatewaySettingsForm,
+                    onTestGatewayConnection = viewModel::testGatewayConnection,
+                    onSaveGatewaySettings = viewModel::saveGatewaySettingsAndConnect,
+                    onSetGatewayTtsEnabled = viewModel::setGatewayTtsEnabled,
+                    onSetAppUiLanguage = { language ->
+                        viewModel.setAppUiLanguage(language) { recreate() }
+                    },
+                    onSelectModalTab = viewModel::selectModalTab,
+                    onCloseModalTab = viewModel::closeModalTab,
                     onOpenCanvasAmap = viewModel::openCanvasAmap
                 )
             }

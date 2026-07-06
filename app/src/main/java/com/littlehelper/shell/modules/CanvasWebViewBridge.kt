@@ -26,6 +26,9 @@ object CanvasWebViewBridge {
     private val _galleryDownloadRequests = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val galleryDownloadRequests: SharedFlow<Int> = _galleryDownloadRequests.asSharedFlow()
 
+    private val _galleryDeleteRequests = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val galleryDeleteRequests: SharedFlow<Int> = _galleryDeleteRequests.asSharedFlow()
+
     fun attach(webView: WebView) {
         webViewRef = WeakReference(webView)
         _amapAvailable.value = false
@@ -50,6 +53,24 @@ object CanvasWebViewBridge {
     fun requestGalleryDownload(index: Int): Boolean {
         if (galleryItemAt(index) == null) return false
         return _galleryDownloadRequests.tryEmit(index)
+    }
+
+    fun requestGalleryDelete(index: Int): Boolean {
+        if (galleryItemAt(index) == null) return false
+        return _galleryDeleteRequests.tryEmit(index)
+    }
+
+    fun notifyGalleryItemDeleted(index: Int) {
+        val webView = webViewRef?.get() ?: return
+        webView.evaluateJavascript(
+            "try{window.__LH_removeGalleryItem&&window.__LH_removeGalleryItem($index)}catch(e){false}",
+        ) {
+            refreshMediaState()
+        }
+    }
+
+    fun reloadWebView() {
+        webViewRef?.get()?.reload()
     }
 
     fun refreshAmapAvailability() {

@@ -1,14 +1,19 @@
 package com.littlehelper.shell.transport
 
 import android.content.Context
+import com.littlehelper.settings.GatewayAuthMode
 
-/** Gateway Canvas WebView HTTP 鉴权（与 WS deviceToken 不同，静态 Canvas 认 shared token）。 */
+/** Gateway Canvas WebView HTTP 鉴权（静态 Canvas 用共享 token/password，不用 deviceToken）。 */
 object GatewayCanvasAuth {
 
-    /** Canvas 静态文件路由用 BuildConfig 共享 token，不用 pairing 后的 deviceToken。 */
     fun resolveCanvasHttpToken(): String {
-        val config = GatewayConfig.fromBuildConfig()
-        return config.gatewayToken.ifBlank { config.password }
+        val config = GatewayRuntime.configOrNull() ?: return ""
+        if (!config.isConnectable) return ""
+        return when (config.authMode) {
+            GatewayAuthMode.TOKEN -> config.gatewayToken
+            GatewayAuthMode.PASSWORD -> config.password
+            GatewayAuthMode.NONE -> ""
+        }
     }
 
     fun resolveBearerToken(context: Context): String = resolveCanvasHttpToken()

@@ -14,13 +14,11 @@ import com.littlehelper.shell.modules.GalleryDeepLink
 
 internal class GatewayCanvasWebViewClient(
     gatewayBaseUrl: String,
-    authToken: String,
     extraHeaders: Map<String, String> = emptyMap()
 ) : WebViewClient() {
 
     private val resourceLoader = GatewayCanvasResourceLoader(
         gatewayBaseUrl = gatewayBaseUrl,
-        authToken = authToken,
         extraHeaders = extraHeaders
     )
 
@@ -28,9 +26,6 @@ internal class GatewayCanvasWebViewClient(
         view: WebView,
         request: WebResourceRequest
     ): WebResourceResponse? {
-        if (request.isForMainFrame) {
-            return super.shouldInterceptRequest(view, request)
-        }
         val url = request.url?.toString().orEmpty()
         if (url.isNotBlank()) {
             resourceLoader.load(url, request.requestHeaders)?.let { return it }

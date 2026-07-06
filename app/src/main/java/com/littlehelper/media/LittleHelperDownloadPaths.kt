@@ -5,8 +5,9 @@ import java.io.File
 
 object LittleHelperDownloadPaths {
 
-    const val FOLDER_NAME = "LittleHelper"
-    const val RELATIVE_PATH = "Download/LittleHelper"
+    const val FOLDER_NAME = "LoongClaw"
+    /** MediaStore 要求 indexed 目录路径以 `/` 结尾。 */
+    const val RELATIVE_PATH = "Download/LoongClaw/"
 
     fun downloadsDir(): File =
         File(

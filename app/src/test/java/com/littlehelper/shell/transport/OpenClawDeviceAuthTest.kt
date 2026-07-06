@@ -89,4 +89,15 @@ class OpenClawDeviceAuthTest {
         assertEquals("device-tok", OpenClawDeviceAuth.resolveAuthToken(config, "device-tok"))
         assertEquals("gw", OpenClawDeviceAuth.resolveAuthToken(config, null))
     }
+
+    @Test
+    fun resolveSharedCredential_usesGatewayTokenOrPassword() {
+        val tokenConfig = GatewayConfig(host = "x", port = 1, password = "pw", gatewayToken = "gw")
+        val passwordConfig = tokenConfig.copy(
+            authMode = com.littlehelper.settings.GatewayAuthMode.PASSWORD,
+            password = "secret",
+        )
+        assertEquals("gw", OpenClawDeviceAuth.resolveSharedCredential(tokenConfig))
+        assertEquals("secret", OpenClawDeviceAuth.resolveSharedCredential(passwordConfig))
+    }
 }

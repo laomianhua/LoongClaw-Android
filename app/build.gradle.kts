@@ -5,13 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
-    }
-}
-
 android {
     namespace = "com.littlehelper"
     compileSdk {
@@ -24,81 +17,13 @@ android {
         applicationId = "com.littlehelper"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 4
+        versionName = "2.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField(
-            "String",
-            "DEEPSEEK_API_KEY",
-            "\"${localProperties.getProperty("DEEPSEEK_API_KEY", "")}\""
-        )
-
-        // 火山引擎 ASR — 填入 local.properties 中的真实值
-        buildConfigField(
-            "String",
-            "VOLC_APPID",
-            "\"${localProperties.getProperty("VOLC_APPID", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "VOLC_TOKEN",
-            "\"${localProperties.getProperty("VOLC_TOKEN", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "VOLC_CLUSTER",
-            "\"${localProperties.getProperty("VOLC_CLUSTER", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "VOLC_STREAMING_CLUSTER",
-            "\"${localProperties.getProperty("VOLC_STREAMING_CLUSTER", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "VOLC_RESOURCE_ID",
-            "\"${localProperties.getProperty("VOLC_RESOURCE_ID", "")}\""
-        )
-        buildConfigField(
-            "String",
-            "VOLC_STREAMING_WS_URL",
-            "\"${localProperties.getProperty("VOLC_STREAMING_WS_URL", "")}\""
-        )
-
-        buildConfigField(
-            "boolean",
-            "USE_OPENCLAW_SHELL",
-            localProperties.getProperty("USE_OPENCLAW_SHELL", "false")
-        )
-
-        buildConfigField(
-            "boolean",
-            "USE_OPENCLAW_MOCK",
-            localProperties.getProperty("USE_OPENCLAW_MOCK", "true")
-        )
-
-        buildConfigField(
-            "String",
-            "OPENCLAW_GATEWAY_HOST",
-            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_HOST", "192.168.1.55")}\""
-        )
-        buildConfigField(
-            "int",
-            "OPENCLAW_GATEWAY_PORT",
-            localProperties.getProperty("OPENCLAW_GATEWAY_PORT", "18789")
-        )
-        buildConfigField(
-            "String",
-            "OPENCLAW_GATEWAY_PASSWORD",
-            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_PASSWORD", "clawbot-test-2024")}\""
-        )
-        buildConfigField(
-            "String",
-            "OPENCLAW_GATEWAY_TOKEN",
-            "\"${localProperties.getProperty("OPENCLAW_GATEWAY_TOKEN", "")}\""
-        )
+        // Mock 客户端联调 UI（无需真实 Gateway）；正式包与 debug 默认均为 false
+        buildConfigField("boolean", "USE_OPENCLAW_MOCK", "false")
     }
 
     buildTypes {
@@ -126,6 +51,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -138,6 +64,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
 
     testImplementation(libs.junit)

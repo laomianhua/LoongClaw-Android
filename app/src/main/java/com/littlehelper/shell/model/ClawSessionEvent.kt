@@ -38,7 +38,12 @@ sealed class ClawSessionEvent {
 
     data class SessionError(
         val message: String,
+        val detail: String? = null,
         val turnId: String? = null,
-        val pairingRequired: Boolean = false
+        val pairingRequired: Boolean = false,
+        val failureKind: com.littlehelper.shell.transport.ConnectFailureKind =
+            com.littlehelper.shell.transport.ConnectFailureKind.UNKNOWN,
+        val gatewayCode: String? = null,
+        val userAction: String? = null,
     ) : ClawSessionEvent()
 }

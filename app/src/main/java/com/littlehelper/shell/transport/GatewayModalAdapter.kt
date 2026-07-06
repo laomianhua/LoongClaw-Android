@@ -53,8 +53,11 @@ object GatewayModalAdapter {
 
         val joinedChat = chatParts.joinToString("\n").trim()
         val wireText = when {
+            modalJson != null -> {
+                val chatOnly = chatTextForSplitWire(joinedChat)
+                buildWire(chatOnly, modalJson)
+            }
             joinedChat.contains(MessageBlockParser.MARKER_MODAL) -> joinedChat
-            modalJson != null -> buildWire(joinedChat, modalJson!!)
             else -> joinedChat
         }
         return AssistantWire(
@@ -69,7 +72,18 @@ object GatewayModalAdapter {
     private fun buildWire(chatText: String, modalJson: String): String = buildString {
         append(MessageBlockParser.MARKER_CHAT).append('\n').append(chatText).append("\n\n")
         append(MessageBlockParser.MARKER_MODAL).append('\n').append(modalJson.trim()).append('\n')
-        append(MessageBlockParser.MARKER_END)
+    }
+
+    private fun chatTextForSplitWire(joinedChat: String): String {
+        if (joinedChat.isBlank()) return joinedChat
+        if (!joinedChat.contains(MessageBlockParser.MARKER_CHAT) &&
+            !joinedChat.contains(MessageBlockParser.MARKER_MODAL)
+        ) {
+            return joinedChat
+        }
+        return MessageBlockParser.extractStreamingChatPreview(joinedChat).ifBlank {
+            MessageBlockParser.parse(joinedChat).chatText
+        }
     }
 
     private fun extractModalFromPayload(payload: JsonObject): String? {

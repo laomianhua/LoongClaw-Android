@@ -1,5 +1,6 @@
 package com.littlehelper.shell.modules.renderers
 
+import android.util.Log
 import android.webkit.WebResourceResponse
 import com.littlehelper.shell.transport.GatewayCanvasAuth
 import okhttp3.OkHttpClient
@@ -7,15 +8,12 @@ import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
- * 为 WebView 子资源（link/script/img 等）注入 Gateway Bearer，避免 401。
+ * 为 WebView 主文档与子资源注入 Gateway Bearer（每次请求现场读 token，不冻结 factory 快照）。
  */
 internal class GatewayCanvasResourceLoader(
     private val gatewayBaseUrl: String,
-    authToken: String,
-    extraHeaders: Map<String, String> = emptyMap()
+    private val extraHeaders: Map<String, String> = emptyMap()
 ) {
-    private val authHeaders = buildAuthHeaders(authToken, extraHeaders)
-
     private val client = OkHttpClient.Builder()
         .followRedirects(true)
         .followSslRedirects(true)
@@ -24,10 +22,19 @@ internal class GatewayCanvasResourceLoader(
         .build()
 
     fun load(url: String, requestHeaders: Map<String, String>): WebResourceResponse? {
+        val authToken = GatewayCanvasAuth.resolveCanvasHttpToken()
+        val authHeaders = buildAuthHeaders(authToken, extraHeaders)
         if (!GatewayCanvasAuth.shouldInjectAuth(url, gatewayBaseUrl, authHeaders)) return null
         return runCatching {
+            val merged = mergeHeaders(requestHeaders, authHeaders)
+            // #region agent log
+            Log.d(
+                TAG,
+                "canvas inject url=${url.take(100)} tokenLen=${authToken.length} hasAuth=${merged.containsKey("Authorization")}"
+            )
+            // #endregion
             val requestBuilder = Request.Builder().url(url)
-            mergeHeaders(requestHeaders, authHeaders).forEach { (key, value) ->
+            merged.forEach { (key, value) ->
                 requestBuilder.header(key, value)
             }
             val response = client.newCall(requestBuilder.build()).execute()
@@ -52,6 +59,8 @@ internal class GatewayCanvasResourceLoader(
     }
 
     companion object {
+        private const val TAG = "CanvasAuthDebug"
+
         internal fun buildAuthHeaders(
             authToken: String,
             extraHeaders: Map<String, String>

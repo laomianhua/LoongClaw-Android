@@ -47,7 +47,7 @@ fun WebViewBlockRenderer(
             ?.let { GatewayCanvasAuth.prepareCanvasLoadUrl(it) }
             ?.let { ModalCanvasUrlResolver.appendLoadRevision(it, loadRevision) }
     }
-    val loadHeaders = remember(data, gatewayAuthToken) {
+    val loadHeaders = remember(data, gatewayAuthToken, loadRevision) {
         buildWebViewLoadHeaders(data, gatewayAuthToken)
     }
     val cookies = remember(data) { data.get("cookies")?.takeIf { !it.isJsonNull }?.asString?.trim() }
@@ -97,7 +97,6 @@ fun WebViewBlockRenderer(
                     configureForCanvas(scrollable = layout.scrollable)
                     webViewClient = GatewayCanvasWebViewClient(
                         gatewayBaseUrl = gatewayBaseUrl,
-                        authToken = gatewayAuthToken,
                         extraHeaders = extraHeaders
                     )
                     webChromeClient = GatewayCanvasChromeClient()
@@ -109,8 +108,12 @@ fun WebViewBlockRenderer(
                     CookieManager.getInstance().setCookie(resolvedUrl, cookieHeader)
                     CookieManager.getInstance().flush()
                 }
+                val runtimeHeaders = buildWebViewLoadHeaders(
+                    data,
+                    GatewayCanvasAuth.resolveCanvasHttpToken()
+                )
                 webView.clearCache(true)
-                webView.loadUrl(resolvedUrl, loadHeaders)
+                webView.loadUrl(resolvedUrl, runtimeHeaders)
             },
             onRelease = { webView ->
                 CanvasWebViewBridge.detach(webView)
@@ -144,7 +147,7 @@ internal fun buildWebViewLoadHeaders(data: JsonObject, gatewayAuthToken: String)
 }
 
 @SuppressLint("ClickableViewAccessibility")
-private fun WebView.configureForCanvas(scrollable: Boolean) {
+internal fun WebView.configureForCanvas(scrollable: Boolean = true) {
     settings.javaScriptEnabled = true
     settings.domStorageEnabled = true
     settings.cacheMode = WebSettings.LOAD_NO_CACHE
@@ -187,20 +190,6 @@ private fun WebView.configureForCanvas(scrollable: Boolean) {
             }
         }
         false
-    }
-}
-
-private class GatewayCanvasChromeClient : WebChromeClient() {
-    override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-        Log.d(
-            TAG,
-            "JS ${message.messageLevel()} ${message.sourceId()}:${message.lineNumber()} ${message.message()}"
-        )
-        return super.onConsoleMessage(message)
-    }
-
-    companion object {
-        private const val TAG = "CanvasWebView"
     }
 }
 

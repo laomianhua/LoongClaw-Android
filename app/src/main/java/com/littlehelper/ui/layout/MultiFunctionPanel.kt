@@ -77,10 +77,11 @@ fun MultiFunctionPanel(
     moduleLoadState: ModuleLoadState,
     modulePayload: ModulePayload,
     modalState: ModalState,
-    modalHistory: com.littlehelper.shell.modal.ModalHistoryState = com.littlehelper.shell.modal.ModalHistoryState(),
-    onNavigateModalHistory: (Int) -> Unit = {},
-    onDeleteModalHistoryPage: () -> Unit = {},
+    modalSlots: com.littlehelper.shell.modal.ModalSlotState = com.littlehelper.shell.modal.ModalSlotState(),
+    onSelectModalTab: (String) -> Unit = {},
+    onCloseModalTab: (String) -> Unit = {},
     onOpenCanvasAmap: () -> Unit = {},
+    gatewayBaseUrl: String = "",
     onRequestExpand: () -> Unit,
     onRequestCollapse: () -> Unit,
     modifier: Modifier = Modifier
@@ -138,10 +139,11 @@ fun MultiFunctionPanel(
                 moduleLoadState = moduleLoadState,
                 modulePayload = modulePayload,
                 modalState = modalState,
-                modalHistory = modalHistory,
-                onNavigateModalHistory = onNavigateModalHistory,
-                onDeleteModalHistoryPage = onDeleteModalHistoryPage,
+                modalSlots = modalSlots,
+                onSelectModalTab = onSelectModalTab,
+                onCloseModalTab = onCloseModalTab,
                 onOpenCanvasAmap = onOpenCanvasAmap,
+                gatewayBaseUrl = gatewayBaseUrl,
                 modifier = Modifier.fillMaxSize()
             )
         }

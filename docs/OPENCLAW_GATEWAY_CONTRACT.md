@@ -1,6 +1,6 @@
 # LittleHelper ↔ OpenClaw Gateway 集成契约
 
-> **版本**：2026-06-22（T1–T9 真机联调通过 + 华亭嘉园→天安门导航场景）  
+> **版本**：2026-07-04（多 Agent + chat.send）  
 > **App 角色**：哑终端壳（WebSocket + MODAL 渲染 + TTS）  
 > **Gateway 角色**：意图理解、生成 MODAL、发布 Canvas HTML  
 
@@ -16,12 +16,19 @@
 
 ## 1. 会话与通道
 
-| 会话 key | 用途 |
-|----------|------|
-| `agent:main:main` | **手机 App 用户会话**（`sessions.send` 来自 Android） |
+| 标识 | 用途 |
+|------|------|
+| `client.id = openclaw-android` | **识别 LittleHelper 手机客户端**（MODAL / 回复应路由到此连接） |
+| `agent:{name}:main` | **App 用户会话**（设置页「智能体名称」→ `SessionKeyResolver`；默认 `main` → `agent:main:main`） |
+| `agent:laoxia:main` 等 | 家庭/云端多 Agent：每人独立 agent + workspace |
+| `agent:main:main` | 默认 agent 主会话；App 默认与 Control UI **共用**此会话 |
 | `agent:main:cursor-dev` | Cursor IDE 开发协调，**勿与 App 混用** |
 
-App 连接：`WebSocket` → `sessions.messages.subscribe` → 收 `chat.delta` / `session.message`。
+**App 连接顺序**（与 PC 客户端一致；subscribe 为收消息必需）：
+
+`WebSocket connect` → `hello-ok` → **`sessions.messages.subscribe`** → **`chat.send`** → 收 `chat.delta` / `session.message`。
+
+**Gateway Agent 注意**：不要假设手机用户会话固定为某一 key。应依据 **`client.id=openclaw-android`**（及该连接上的 `sessionKey`）下发 MODAL 与助手回复。
 
 ---
 
@@ -35,14 +42,14 @@ App 连接：`WebSocket` → `sessions.messages.subscribe` → 收 `chat.delta` 
 
 ===MODAL===
 {"action":"open|update|close","blocks":[...]}
-===END===
 ```
 
 | 段 | App 行为 |
 |----|----------|
 | `===CHAT===` | 聊天气泡正文（`MessageBlockParser.chatDisplayText`） |
-| `===MODAL===` | JSON → `ModalState` → `ModalCanvasHost` |
-| `===END===` | 标记 MODAL 结束；缺省时 App 仍可解析完整 JSON |
+| `===MODAL===` | JSON → `ModalState` → `ModalCanvasHost`；**紧跟完整 JSON，勿换行插标记** |
+
+**禁止 `===END===`**：App 真机已确认该标记会导致 MODAL 解析失败；JSON 须为 `===MODAL===` 后的裸文本，不要用 markdown 代码块包裹。
 
 **分轨下发**：`payload.modal` 或 `content[]` 中 `type:modal` 与 `deltaText` 可并存；App 在 `GatewayEventMapper.resolveAssistantWire` 合并。
 
@@ -76,7 +83,7 @@ App 连接：`WebSocket` → `sessions.messages.subscribe` → 收 `chat.delta` 
 |------|--------|-----------|
 | `webview` | `WebViewBlockRenderer` | 见 §4 |
 | `table` | `TableBlockRenderer` | 见 §5 |
-| `markdown` | `MarkdownBlockRenderer` | `{ "content": "..." }` |
+| `markdown` | `MarkdownBlockRenderer` | `{ "content": "..." }` — **Phase 1 轻量子集**：段落、列表、粗体、行内代码、标题、引用；**无** Markdown 表格、**无** `[text](url)` 链接；复杂排版用 `table` 或 webview 脚本 |
 | `chart/line` | `ChartLinePlaceholderRenderer` | `{ "series": [...], "options": {} }` |
 
 ---
@@ -271,7 +278,7 @@ window.__LITTLEHELPER_MAP__ = {
 | 现象 | 原因 | 处理方 |
 |------|------|--------|
 | 「等待 OpenClaw 指令」 | 未收到 MODAL | Gateway 补 wire |
-| 黄条「解析失败」 | MODAL JSON 语法错误/截断 | Gateway 修 JSON |
+| 黄条「解析失败」 | MODAL JSON 语法错误/截断；或含 `===END===` | Gateway 修 JSON；**去掉** `===END===` |
 | 白板不刷新 | 新回复无 MODAL | Gateway 必须 `action:open` |
 | 表格空灰行 | headers/rows 格式错误 | 用 §5 对象 schema |
 | WebView 白屏 | URL 404 或绝对地址不可达 | 相对路径 + curl 200 |

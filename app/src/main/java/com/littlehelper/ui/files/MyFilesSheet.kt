@@ -204,7 +204,11 @@ private fun MyFileRow(
             )
         }
         IconButton(onClick = onDelete) {
-            Text(text = "删除", fontSize = 13.sp, color = Color(0xFFFF3B30))
+            Text(
+                text = stringResource(R.string.my_files_delete_confirm),
+                fontSize = 13.sp,
+                color = Color(0xFFFF3B30),
+            )
         }
     }
 }

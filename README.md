@@ -1,517 +1,352 @@
-# 龙虾助手（LittleHelper）
+# 龙爪（LoongClaw for Android）
 
-**当前版本：2.0**（`versionCode` 2 · `versionName` 2.0）  
-**应用显示名**：龙虾助手（桌面图标与系统设置中的中文名）
+**v2.1.3** · Android 客户端 · 中文名「龙爪」 · 包名 `com.littlehelper`
 
-面向普通用户的极简 Android 助手客户端。App 定位为 **OpenClaw Gateway 哑终端壳**：语义理解、多模态编排、地图/看板等能力均由局域网 Gateway 完成；App 负责连接、聊天 UI、文字输入、MODAL 白板渲染与 TTS 播报。
+> 英文说明见 [README.en.md](README.en.md)（机翻草稿，内容与本文同步更新中）。
 
-> **2026-06 架构精简（当前主线）**  
-> 已移除 Native 高德地图 SDK、本地 Room 记事本、Reminder 提醒、DeepSeek 本地秘书、App 内录音/火山 ASR 主链路。  
-> 输入改为 **仿微信文字栏**，语音识别交给 **系统输入法自带语音**；地图与复杂页面由 Gateway 下发的 **WebView / MODAL HTML** 承载。
+连接你家或云端的 **OpenClaw Gateway**，在手机上聊天、看白板、听 TTS、上传附件、下载 Gateway 生成的文件。语义与多模态由 Gateway 完成，App 负责连接与展示。
 
-> **2026-06-25 近期重要更新（真机已验收）**  
-> - **白板手势**：上下滚动与左右翻页分离——垂直滑动优先交给内容区；仅当横向位移明显大于纵向时才切换历史页，减少滚到顶/底时误触翻页  
-> - **满 10 页历史**：左右滑手势覆盖整块白板（含底栏进度点与「左右滑动切换」提示）；索引越界自动校正；翻页回调不再因闭包过期而失效  
-> - **冷启动白板**：历史内容仍从 `modal_history.json` 恢复，但面板**默认收起**；用户上滑拖柄再翻历史页  
-> - **文件上传 v1**：输入栏 `+` → 拍照/相册/文件；上传成功后显示「已选：文件名（大小）」；点 **×** 可取消；发送时在消息末尾附加 `[upload:{fileId}:{fileName}]`（输入框仅保留用户自打文字）  
-> - **画廊 v2**：Gateway Canvas 设 `window.__LITTLEHELPER_GALLERY__`；竖向单列；**长按单张**触发 `littlehelper://gallery/download?index=N` 保存原图（已移除 v1 多选批量栏）  
-> - **原图/文件下载**：单图 `__LITTLEHELPER_IMAGE__` 右下角 **↓**、画廊长按均走 `StoredFileDownloader`；`thumbUrl` 用 Canvas 同源（`:18789`），`downloadUrl` 用 `:18889/file/download/…`；写入 **`Download/LittleHelper/`**（文件名 `{displayName}_{MMdd}.{ext}`）；聊天标题栏 **📁 我的文件** 可浏览/打开/删除  
-> - **多模态下载（真机已验收）**：Playwright 生成 PDF → storage → `:18889`；画廊图片 + PDF + 未来游记共用 `__LITTLEHELPER_GALLERY__` / `__LITTLEHELPER_IMAGE__`；长按/↓ → **`Download/LittleHelper/`**；详见 [`scripts/_cursor_dev_multimodal_download_topic.txt`](scripts/_cursor_dev_multimodal_download_topic.txt)  
-> - **下载健壮性**：`__HOST__` 占位符替换、文件 magic-byte 校验（杜绝假成功 Toast）、失败时 `/files/{fileId}` 回退重试
-
-> **2026-06-23 近期重要更新（真机已验收）**  
-> - **品牌**：应用中文名正式改为「龙虾助手」；桌面图标更新为龙虾吉祥物  
-> - **聊天气泡**：长按选区复制；左滑露出「删除」并二次确认（流式中的 partial 气泡不可删）  
-> - **聊天持久化**：会话写入 `filesDir/chat_history.json`（最多 500 条 / 约 2MB，防抖保存）；重启恢复  
-> - **白板历史**：最多保留 10 页快照；左右滑切换；底栏 `左右滑动切换 · 长按删除`  
-> - **白板持久化**：历史写入 `filesDir/modal_history.json`（最多 10 页 / 约 2MB）；冷启动恢复当前页内容，面板默认收起  
-> - **地图 → 高德 App**：Gateway Canvas 设 `window.__LITTLEHELPER_MAP__`；标题栏右侧「用高德地图查看」（15sp，仅有效地图时出现）；Deep Link + H5 降级  
-> - **契约**：高德跳转见 [`docs/OPENCLAW_GATEWAY_CONTRACT.md`](docs/OPENCLAW_GATEWAY_CONTRACT.md) §7.1；Canvas **禁止**自绘跳转大按钮  
-
-> **2026-06-22 联调现状（真机已验收）**  
-> - **Gateway 白板全链路**：`webview` / `table` / `markdown` / `chart/line`；`open` · `update` · `close`（T1–T9）  
-> - **Canvas HTTP**：`/__openclaw__/canvas/*.html`；地图走受保护副本 `map.littlehelper.html`  
-> - **真场景**：聊天气泡摘要 + 白板 WebView 路线地图（如华亭嘉园 → 天安门）  
-> - **契约固化**：[`docs/OPENCLAW_GATEWAY_CONTRACT.md`](docs/OPENCLAW_GATEWAY_CONTRACT.md)；Gateway skill `workspace/skills/littlehelper-modal/SKILL.md`  
-> - **App 侧**：已移除本地 `webview测试` 硬编码；MODAL 分轨解析、Canvas URL 改写、白板切换刷新、表格 schema 兼容  
-> - **故障提示**：MODAL JSON 无效时顶部黄条「白板内容解析失败，已仅显示文字回复」
+![界面参考](docs/UIReferenceDesign.png)
 
 ---
 
-## 目录
+## 产品定位
 
-- [功能概览](#功能概览)
-- [近期更新（2026-06-25）](#近期更新2026-06-25)
-- [近期更新（2026-06-23）](#近期更新2026-06-23)
-- [联调现状（2026-06-22）](#联调现状2026-06-22)
-- [架构与数据流](#架构与数据流)
-- [文件上传架构](#-文件上传架构)
-- [界面布局](#界面布局)
-- [MODAL 多模态协议](#modal-多模态协议)
-- [快速开始](#快速开始)
-- [配置说明](#配置说明)
-- [项目结构](#项目结构)
-- [技术栈](#技术栈)
-- [开发与测试](#开发与测试)
-- [权限说明](#权限说明)
-- [已知限制与后续方向](#已知限制与后续方向)
-- [历史版本说明](#历史版本说明)
+**龙爪**面向普通用户的 **单一超级助手**：开箱连接 Gateway 默认主会话，不需要在 App 里选 Agent、配语气或理解 sessionKey。
+
+| 项 | 当前产品行为 |
+|----|--------------|
+| 对外名称 | 中文 **龙爪** / 英文 **LoongClaw**（启动器名随界面语言变化） |
+| 包名 / 技术标识 | `com.littlehelper`（与 Gateway skill `littlehelper-modal` 等保持不变） |
+| 固定会话 | **`agent:main:main`**（与 Control UI 主会话一致） |
+| 连接方式 | `ws://` + Tailscale / 局域网（**不支持** `wss://` 公网） |
+| 多 Agent | 代码保留，**设置页不提供**；见 [§进阶：多 Agent](#进阶多-agent代码级默认未启用) |
 
 ---
 
-## 功能概览
+## 主要功能
 
-| 能力 | 说明 |
-|------|------|
-| **Gateway 长连接** | WebSocket 连接 OpenClaw Gateway；设备 Ed25519 鉴权；断线 10s 静默重连 |
-| **文字对话** | 底部仿微信输入栏；系统键盘输入；可用输入法自带语音识别转文字后发送 |
-| **流式回复** | 接收 Gateway `chat.delta`，聊天气泡逐字/逐段更新 |
-| **MODAL 白板** | 解析 `===CHAT===` / `===MODAL===` / `===END===` 线框；底部面板顶出渲染 |
-| **白板历史** | 最多 10 页快照；整块白板区域左右滑切换（含底栏）；轴向判定避免与上下滚动冲突；底栏进度点；长按删除当前页；本地 `modal_history.json` 持久化 |
-| **地图 → 高德** | Canvas `__LITTLEHELPER_MAP__`；标题栏「用高德地图查看」；Deep Link + H5 降级 |
-| **聊天气泡操作** | 长按复制；左滑删除（确认对话框）；同时仅一条展开删除态 |
-| **聊天持久化** | `ChatHistoryStore` 本地 JSON；重启后恢复（不含 partial 流式条） |
-| **多模态渲染** | 首批块类型：`table`、`markdown`、`webview`（HTTP URL 全屏加载） |
-| **连接态 UX** | 标题栏 Gateway 指示灯；静默重连期间橙色「连接中」；超时后显示重试 Banner |
-| **思考态** | 用户发送后、首条助手回复前显示「思考中…」动画气泡 |
-| **TTS 播报** | 助手完整回复自动朗读（系统 TTS 引擎） |
-| **文件上传** | `+` 选文件 → HTTP 上传到 Gateway `:18889`；已选提示可 × 取消；发送时附加 `[upload:fileId:fileName]` |
-| **Canvas 文件下载** | 单图 **↓** / 画廊长按；GET `:18889` → **`Download/LittleHelper/`**；标题栏 **我的文件** 入口 |
-| **Mock 联调** | `USE_OPENCLAW_MOCK=true` 时使用内存 Mock 客户端，无需真实 Gateway |
+| | |
+|---|---|
+| 💬 **对话** | 文本输入栏；流式回复；本地聊天历史（可删单条 / 清空） |
+| 📋 **MODAL 白板** | 表格、Markdown、WebView；底部标签切换（最多 6 个） |
+| 🗺️ **地图** | App 支持地图 MODAL + 高德跳转；**安装包不含**地图 canvas，需 Gateway 自备（见 bundle README） |
+| 📎 **附件** | 拍照 / 相册 / 文件上传到 Gateway（`:18889` sidecar） |
+| 📁 **我的文件** | 浏览与管理 `Download/LoongClaw/` 下已下载文件 |
+| 🖼️ **画廊等** | 依赖 Gateway 参考 skill（bundle `standard` 含 gallery / file-manager 等） |
+| 🔊 **TTS** | Gateway 助手回复朗读（设置内可关） |
+| ⚙️ **连接** | App 内填 Gateway 地址与 Token/密码；**四步握手进度** |
+| 🌐 **界面语言** | 设置内 **中文 / English**（部分界面，见下节） |
+| 📡 **后台保活** | 保存连接后 **前台 Service** + 通知栏；息屏后尽量保持 WebSocket |
 
-**已移除（不再提供）：**
-
-- 本地 DeepSeek 秘书 + Room 记事本
-- Native 高德 3D 地图 SDK
-- App 内按住说话 + 火山 ASR
-- 本地提醒闹钟 / 待办勾选 / Dashboard 记忆卡片
+Gateway 侧须安装 skill 等资源。推荐用仓库自带的 **Gateway Companion Bundle**（`standard` 含 MODAL 核心 skill + 画廊/文件/记事本/天气等**参考 skill** 及配套脚本，见 [§Gateway 配套安装](#3-gateway-配套安装)）。
 
 ---
 
-## 近期更新（2026-06-25）
+## 界面语言（v2.1.3）
 
-本轮主要修复白板历史切换的手势体验，真机已验收。
+设置页提供 **中文 | English** 两个选项（单行切换），选择后界面会刷新。
 
-### 白板手势与满页历史
+**会随语言切换的部分**
 
-| 问题 | 修复 |
-|------|------|
-| 内容可上下滚动时，滑到顶/底容易误触发左右翻页 | `ModalHistorySwipeGesture`：超过 touch slop 后若纵向占优则放弃；翻页需 `\|横向\| ≥ 48px` 且 `\|横向\| > \|纵向\| × 1.5` |
-| 满 10 页时在底栏「10/10」区域滑动无反应 | 手势监听从内容 `Box` 提升到整块 `ModalHistoryCanvasShell` Column（含进度点与提示文案） |
-| 持久化裁剪后 `currentIndex` 偶发越界，表现为滑不动 | `ModalHistoryState.normalized()`；load / save / navigate / delete 路径统一校正索引 |
-| 翻页回调可能读到过期 `history` | `rememberUpdatedState` 持有最新 `onNavigateHistory`；边界判断交给 `ModalHistoryReducer.navigate` |
+- ⚙️ 设置（Gateway 字段、握手四步、保存/测试按钮等）
+- ➕ 添加附件 Sheet、输入栏占位符
+- 📁 **我的文件** 列表与删除确认
 
-**手势约定（与底栏提示一致）：**
+**仍为中文的部分（已知限制）**
 
-| 手势 | 行为 |
-|------|------|
-| 左滑（手指向左） | 较新的一页（index +1） |
-| 右滑（手指向右） | 较旧的一页（index −1） |
-| 在最新页（如 10/10） | 只能右滑查看更早页；在最早页（1/10）只能左滑 |
+- 主聊天标题、欢迎语、清空记录对话框
+- 连接失败顶部横幅与 Toast 错误提示
+- Gateway 返回的助手回复（由 Agent / skill 决定）
 
-实现：`ModalHistorySwipeGesture.kt`、`ModalHistoryCanvasShell.kt`、`ModalHistoryReducer.kt`、`ModalHistoryModels.kt`。
-
-### 冷启动与白板面板
-
-| 行为 | 说明 |
-|------|------|
-| 有本地白板历史 | 恢复当前页 `blocks` 与历史队列，**面板默认收起** |
-| 用户查看历史 | 上滑拖柄展开，底栏左右滑翻页 |
-| 新 MODAL 到达 | 仍由 `SessionReducer` 自动顶出面板（与冷启动无关） |
-
-### 文件上传（App 端 v1，真机已验收）
-
-| 步骤 | 行为 |
-|------|------|
-| 点 `+` | `FilePickerSheet`：拍照 / 相册 / 文件（`rememberLauncherForActivityResult`） |
-| 本地校验 | 图片 ≤10MB、PDF ≤30MB、其他 ≤10MB（`AttachmentSizeValidator`） |
-| 上传 | `FileUploadManager` → `http://{OPENCLAW_GATEWAY_HOST}:18889/upload` |
-| 上传成功 | 输入框上方显示 **已选：文件名（大小）**；**不**改写输入框文字 |
-| 点 **×** | 清除 `pendingUploadResult`、`pendingAttachment` 与「已选」提示行；输入框文字不变；无附件时发送按钮恢复不可用 |
-| 点发送 | 在消息文本末尾追加 ` [upload:{fileId}:{fileName}]`（仅文字也可发；仅附件也可发） |
-| 发送成功 | 清空输入框与附件状态 |
-| 发送失败 | 保留已选附件与 upload 结果，可重试发送或点 **×** 取消 |
-
-示例：用户输入「帮我分析这张图」并附带已上传图片 → Gateway 收到：`帮我分析这张图 [upload:eb30ef603aa044b383ce7b7ae6b1881f:IMG_123.jpg]`
-
-实现：`FilePickerSheet.kt`、`ChatInputBar.kt`、`FileUploadManager.kt`、`MainViewModel.onAttachmentPicked` / `sendComposerText` / `clearPendingAttachment`。
-
-### Canvas 多模态文件下载（v2，真机已验收）
-
-**全链路（图片 / PDF / 未来游记同一协议）：**
-
-```
-白板 webview → Gateway Playwright 生成 PDF / 图片入 storage
-            → 18889 提供 downloadUrl
-            → Canvas 注入 __LITTLEHELPER_GALLERY__ 或 __LITTLEHELPER_IMAGE__
-            → 用户长按 / ↓
-            → App 下载到 Download/LittleHelper/
-            → 📁「我的文件」或系统文件管理器打开
-```
-
-Gateway 在 Canvas HTML 中注入全局对象，App 通过 `CanvasWebViewBridge` 读取并响应 Deep Link：
-
-| 场景 | Gateway 约定 | App 行为 |
-|------|--------------|----------|
-| 单文件 | `window.__LITTLEHELPER_IMAGE__`（`displayName` / `downloadUrl` / `mimeType`） | 白板右下角 **↓** → 下载 |
-| 多文件画廊 | `window.__LITTLEHELPER_GALLERY__.items[]`（可混排 **图片 + PDF**） | 竖向单列；**长按** ~500ms → `littlehelper://gallery/download?index=N` |
-| 缩略图 | `thumbUrl`：**:18789** Canvas 同源 | WebView 内展示（PDF 可无 thumb，用占位图） |
-| 原文件 | `downloadUrl`：**:18889** `http://{host}:18889/file/download/{storageFileName}` | `StoredFileDownloader` GET + 鉴权 |
-
-**保存位置**：`Download/LittleHelper/`（系统公共下载目录）。
-
-**文件名**：Gateway 提供 `displayName` → App 保存为 `{displayName}_{MMdd}.{ext}`（如 `大胖_0627.jpg`、`东京游记_0627.pdf`）；重名自动 `_2`、`_3`…
-
-**我的文件**：聊天标题栏右侧 📁 → 列出 / 打开 / 删除。
-
-**Gateway 协调文档**：[`scripts/_cursor_dev_multimodal_download_topic.txt`](scripts/_cursor_dev_multimodal_download_topic.txt)
-
-实现：`GalleryDeepLink.kt`、`StoredFileDownloader.kt`、`LittleHelperFileSaver.kt`、`MyFilesRepository.kt`、`MyFilesSheet.kt`、`ModalHistoryCanvasShell.kt`。
-
----
-
-## 近期更新（2026-06-23）
-
-本轮更新均在真机验收通过，可作为当前稳定基线。
-
-### 品牌与图标
-
-| 项 | 说明 |
-|----|------|
-| 应用名 | `strings.xml` → `app_name` = **龙虾助手** |
-| 图标 | Adaptive Icon + 龙虾吉祥物前景；`res/mipmap-*` / `mipmap-anydpi-v26` |
-| 聊天标题 | 「与龙虾助手的对话」 |
-
-> **开发提示**：Android Studio **Image Asset** 生成的 launcher XML 常把版权注释写在 `<?xml` 之前，会导致 `packageDebugResources` 失败。修复方式：把 `<?xml version="1.0" encoding="utf-8"?>` 挪到文件第一行。项目规则见 `.cursor/rules/android-launcher-xml.mdc`。
-
-### 聊天气泡
-
-- **复制**：`SelectionContainer`，长按进入系统文字选区
-- **删除**：向左滑出红色「删除」→ 确认对话框；`isPartial` 流式气泡禁用删除
-- **持久化**：`chat/ChatHistoryStore.kt` 写入 `chat_history.json`（上限 500 条）
-
-### 本地持久化（聊天 + 白板）
-
-两类内容均在 App 私有目录落盘，杀进程或重启后自动恢复：
-
-| 数据 | 文件 | 模块 | 上限 | 恢复行为 |
-|------|------|------|------|----------|
-| 聊天记录 | `chat_history.json` | `ChatHistoryStore` | 500 条 / ~2MB | 恢复消息列表（不含 partial 流式条） |
-| 白板历史 | `modal_history.json` | `ModalHistoryStore` | 10 页 / ~2MB | 恢复当前页 blocks；面板默认收起，用户上滑展开后可左右翻页 |
-
-保存策略：状态变化后 **300ms 防抖**写入；删除聊天气泡或白板页时立即落盘。
-
-### 白板历史（Story 式）
-
-每次 MODAL `open` / `update` 将当前 blocks 深拷贝入队（最多 **10** 条）：
-
-| 手势 / 操作 | 行为 |
-|-------------|------|
-| 白板区域左滑 | 较新的一页（含底栏进度点与提示条，2026-06-25 起） |
-| 白板区域右滑 | 较旧的一页 |
-| 上下滑动 | 滚动当前页内容（WebView / 多块 LazyColumn）；不与翻页冲突 |
-| 底栏 `长按删除` | 从队列移除当前页；若队列为空则收起白板并清空本地文件 |
-| 底栏进度点 | 当前页 / 总页数 |
-
-实现：`ModalHistoryReducer`、`ModalHistorySwipeGesture`、`ModalHistoryCanvasShell`、`ModalHistoryStore`、`SessionReducer` 挂钩。
-
-冷启动后：若存在已保存的白板历史，后台恢复当前页内容；**面板默认收起**，用户上滑拖柄可展开并左右翻页。
-
-### 地图 → 高德 App（无 Native SDK）
-
-Gateway 在 Canvas HTML 中设置 `window.__LITTLEHELPER_MAP__`（路线 / 单点 / 完整 `amapUrl`），详见契约 **§7.1**。
-
-| App 模块 | 职责 |
-|----------|------|
-| `AmapCanvasInjector` | 页面加载后注入 `__LH_openAmap` / `__LH_hasAmap`；剥离 Gateway 遗留的大按钮 |
-| `AmapDeepLink` | `shouldOverrideUrlLoading` 拦截 scheme；未装高德则 `uri.amap.com` H5 |
-| `CanvasWebViewBridge` | WebView ↔ 原生标题栏「用高德地图查看」 |
-| `ModalCanvasHost` | 标题行右侧显示入口（15sp，仅 `__LH_hasAmap()` 为真） |
-
-**Gateway 禁止**：在 Canvas 内画「高德导航」「网页版」「用高德地图查看」等大按钮；跳转入口由 App 标题栏统一提供。
-
----
-
-## 联调现状（2026-06-22）
-
-### 已通过（真机）
-
-| 类别 | 内容 |
-|------|------|
-| **WebView 能力** | Gateway 发布 `webview_spec_test.html`；高德瓦片满屏、± 缩放 |
-| **白板测试 T1–T9** | 静态 WebView · 表格 · Markdown · 折线图 · 组合 · 动态 HTML · 真地图 · update · close |
-| **业务场景** | 自然语言问路（华亭嘉园 → 天安门）：气泡路线摘要 + 白板路线地图 |
-
-### App ↔ Gateway 约定（已文档化）
-
-| 资源 | 路径 |
-|------|------|
-| 集成契约（权威） | [`docs/OPENCLAW_GATEWAY_CONTRACT.md`](docs/OPENCLAW_GATEWAY_CONTRACT.md) |
-| Gateway skill 镜像 | `scripts/skills/littlehelper-modal/SKILL.md` |
-| Gateway 部署目标 | `~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md` |
-| Canvas 页面目录 | `~/.openclaw/canvas/` → HTTP `/__openclaw__/canvas/` |
-
-推送 skill 到 Gateway：`python scripts/publish_littlehelper_gateway_skill.py`  
-Cursor ↔ Gateway 开发协调：`python scripts/openclaw_dev_session.py "话题"`（session `agent:main:cursor-dev`）
-
-### App 侧关键实现（代码已落地）
-
-- `GatewayEventMapper`：`session.message` / `chat.delta` 的 `deltaText`、`payload.modal` 与 wire 正文合并
-- `ModalCanvasUrlResolver`：相对 Canvas URL；绝对 URL 改写到当前 `gatewayBaseUrl`
-- `GatewayCanvasUrlNormalizer`：`map.html` → `map.littlehelper.html`
-- `ModalCanvasHost` / `WebViewBlockRenderer`：白板撑满、`loadRevision` 切换时重建 WebView
-- `ModalHistoryCanvasShell` / `ModalHistorySwipeGesture`：白板历史切换、轴向翻页手势与底栏交互
-- `AmapDeepLink` / `AmapCanvasInjector` / `CanvasWebViewBridge`：高德 Deep Link 与标题栏入口
-- `ChatBubble`：复制 + 左滑删除
-- `ChatHistoryStore`：会话本地持久化
-- `ModalHistoryStore`：白板历史本地持久化
-- `TableBlockRenderer`：table 对象 schema + 字符串数组简写兼容
-- `OpenClawStatusBanner`：MODAL 解析失败黄条
-
-### 常见问题
-
-| 现象 | 原因 |
-|------|------|
-| 白板显示「等待 OpenClaw 指令」 | Gateway 未发 MODAL，仅文字回复 |
-| 黄条「白板内容解析失败…」 | 已有 `===MODAL===` 但其后 JSON **语法错误**、被截断、或包了 ` ```json ` 等；线框对齐≠ JSON 一定合法；黄条会粘住直到下一条成功 MODAL 或用户发消息 |
-| 白板内容不刷新 | 新回复无 MODAL；或需等新 `action:open` |
-| 文件下载成功但找不到 | 请查看 **Download/LittleHelper**（系统文件管理器 → 下载），或 App 内 **我的文件** |
-
----
-
-## 架构与数据流
-
-### 设计原则
-
-```
-用户输入文字（或输入法语音转文字）
-        ↓
-MainViewModel.sendComposerText()
-        ↓
-SessionController.sendTextMessage()
-        ↓
-WebSocketOpenClawSessionClient → OpenClaw Gateway
-        ↓
-Gateway 返回 ClawSessionEvent 流
-        ↓
-SessionReducer（纯函数归约）→ ShellUiState
-        ↓
-ShellUiProjector → MainScreen（聊天 + 白板 + 输入栏）
-```
-
-- **Gateway 负责**：意图理解、业务逻辑、生成 MODAL JSON、地图 HTML 等
-- **App 负责**：WebSocket 传输、状态归约、Compose UI、WebView 渲染、TTS
-
-### 核心模块
-
-| 包 | 职责 |
-|----|------|
-| `shell/transport/` | `WebSocketOpenClawSessionClient`、Gateway 握手/鉴权、`GatewayEventMapper` |
-| `shell/session/` | `SessionController` 生命周期；`SessionReducer` 事件 → 状态 |
-| `shell/parser/` | `MessageBlockParser` 剥离 CHAT/MODAL 线框 |
-| `shell/modules/` | `ModuleHost`、`ModalCanvasHost`、table/markdown/webview 渲染器 |
-| `shell/projection/` | `ShellUiProjector` 将 `ShellUiState` 投影为 UI 读模型 |
-| `viewmodel/` | `MainViewModel`：连接管理、发送消息、TTS、面板状态 |
-| `ui/layout/` | `ChatFlowSection`、`MultiFunctionPanel`、`ChatInputBar` |
-
-### Session 事件流
-
-```
-ClawSessionEvent
-├── SessionOpened / ConnectionState 变化
-├── ChatDelta / ChatFinal          → 更新 messages、streamingAssistantRaw
-├── IntentPreload / IntentFinal    → 切换 activeModule、modulePayload
-└── TurnUploading / …              → capturePhase（保留，供未来扩展）
-```
-
-`SessionReducer` 是唯一允许修改 `ShellUiState` 的纯函数入口，便于单测与审计。
-
----
-
-## 📤 文件上传架构
-
-### 当前实现（v1）
-
-```
-手机 App ─── HTTP POST ──→ Gateway 机 (:18889)
-              multipart        upload_server.py（伴生服务）
-                               → ~/.openclaw/uploads/{fileId}_{originalName}
-                               → Agent 通过 fileId 定位并处理
-```
-
-App 端组件：
-
-- `FilePickerSheet.kt` — 底部选择菜单（拍照 / 相册 / 文件）
-- `ChatInputBar.kt` — 输入栏 `+`、已选提示行、**×** 取消附件
-- `FileUploadManager.kt` — HTTP multipart 上传到 Gateway 机 **18889** 端口（host 取自 `OPENCLAW_GATEWAY_HOST`）
-- `AttachmentSizeValidator.kt` — App 端选文件后、上传前体积校验
-- `MainViewModel` — 暂存 `pendingUploadResult` / `pendingAttachment`；**发送时**在消息末尾追加 `[upload:{fileId}:{fileName}]`（输入框不展示该标记）；`clearPendingAttachment()` 取消已选；发送成功后才清除附件状态
-
-Gateway 端组件：
-
-- `scripts/upload_server.py` — Python HTTP 服务（**不依赖 cgi**，兼容 Python 3.14），监听 18889；保存为 `{fileId}_{originalName}`
-- `scripts/process_upload.py` — 解析消息中的 `[upload:…]` 并按扩展名分流处理（图片 / PDF / Excel / Word / CSV / 文本）
-- 随 `gateway.cmd` 自启
-
-**App 端上传前体积上限**（与 Gateway 50MB 上限独立）：图片 10MB · PDF 30MB · 其他 10MB。
-
-### 上架前改造
-
-当前架构需要用户 Gateway 机有 Python 3.x 环境，非技术用户有门槛。
-上架前建议统一为「Gateway Plugin」形态——将上传服务作为 Gateway 的插件/扩展组件，
-用户在 App 引导下自动部署，无需手动装 Python 或配置端口。
-
-**约束：**
-
-- 文件数据不进 LLM 上下文（只有 fileId 标记进消息），避免 token 浪费
-- 单文件 ≤ 50MB
-- 临时文件 24h 清理
-
----
-
-## 界面布局
-
-`MainScreen` 采用 **Column 两段式 + 底部固定输入**：
-
-```
-┌─────────────────────────────────┐
-│  OpenClawStatusBanner（断线时）   │
-├─────────────────────────────────┤
-│  ChatFlowSection                │
-│  · 标题「与龙虾助手的对话」+ 指示灯 │
-│  · 聊天气泡（复制 / 左滑删除）     │
-│  · 思考中动画气泡                 │
-│  （weight=1，随键盘/面板压缩）     │
-├─────────────────────────────────┤
-│  MultiFunctionPanel（底部抽屉）   │
-│  · 收起：28dp 拖柄               │
-│  · 展开：约 2/3 屏高             │
-│  · MODAL：Canvas 块 + 历史底栏    │
-│  · 地图页：标题栏右侧「用高德…」   │
-├─────────────────────────────────┤
-│  ChatInputBar（仿微信输入栏）     │
-│  · 左侧 + 附件（拍照/相册/文件）   │
-│  · 已选提示 + × 取消              │
-│  · 圆角文本框 + 发送按钮 ↑        │
-│  · 系统 IME + 输入法自带语音识别   │
-└─────────────────────────────────┘
-```
-
-| 交互 | 行为 |
-|------|------|
-| **发送** | 有文字或已选附件且 Gateway 在线时可发；附件在发送时附加 `[upload:…]` 标记 |
-| **附件 +** | 底部 Sheet 选文件 → 上传成功显示「已选：…」；右侧 **×** 取消已选（上传/发送进行中时禁用） |
-| **面板拖拽** | 拖柄上滑展开 / 下滑收起；MODAL 打开时自动顶出约 2/3 高度；**冷启动默认收起** |
-| **复制气泡** | 长按气泡文字进入系统选区 |
-| **删除气泡** | 左滑露出删除 → 确认；流式 partial 不可删 |
-| **白板历史** | 白板整块区域左右滑切换页（含底栏）；上下滑滚动内容；底栏长按删除当前页 |
-| **打开高德** | 地图白板标题栏右侧（仅有效 `__LITTLEHELPER_MAP__`） |
-| **TTS** | 助手完整回复到达后自动朗读 |
-
----
-
-## MODAL 多模态协议
-
-> **完整契约**（App ↔ Gateway 双向约定、故障对照、联调清单）：[`docs/OPENCLAW_GATEWAY_CONTRACT.md`](docs/OPENCLAW_GATEWAY_CONTRACT.md)  
-> Gateway 持久 skill：`~/.openclaw/workspace/skills/littlehelper-modal/SKILL.md`（仓库镜像 `scripts/skills/littlehelper-modal/SKILL.md`）
-
-Gateway 助手回复可携带线框分段：
-
-```
-===CHAT===
-好的，以下是今天的持仓情况。
-
-===MODAL===
-{"action":"open","blocks":[
-  {"id":"holdings-table","type":"table","data":{...}},
-  {"id":"daily-chart","type":"chart/line","data":{...}}
-]}
-===END===
-```
-
-| 段 | App 行为 |
-|----|----------|
-| `===CHAT===` | 提取纯文本展示在聊天气泡（不含 MODAL 段） |
-| `===MODAL===` | JSON 解析 → `ModalState.blocks` → `ModalCanvasHost` 渲染 |
-| `===END===` | 标记 MODAL 段结束 |
-
-**块渲染器（`shell/modules/renderers/`）：**
-
-| type | 渲染方式 |
-|------|----------|
-| `table` | Compose 表格占位（`TableBlockRenderer`） |
-| `markdown` | Compose Markdown 块（`MarkdownBlockRenderer`） |
-| `webview` | `WebView` 加载 HTTP(S) URL（`WebViewBlockRenderer`）；Gateway Canvas 鉴权见 `GatewayCanvasAuth` |
-| `chart/line` | 占位渲染（`ChartLinePlaceholderRenderer`） |
-
-**action**：`open`（新白板）· `update`（按 id 合并 block）· `close`（收起）。T1–T9 真机已验收。
-
-地图、仪表盘等复杂内容建议 Gateway 下发 **`webview` 块 + HTML 页面 URL**，由 App 全屏 WebView 承载，无需 Native SDK。
-
-**地图跳转（§7.1）**：Gateway 只设 `window.__LITTLEHELPER_MAP__`；App 标题栏提供「用高德地图查看」，禁止 Canvas 自绘跳转按钮。
-
-**Canvas 媒体（画廊 / 单文件 / PDF）**：`__LITTLEHELPER_GALLERY__` / `__LITTLEHELPER_IMAGE__`；`thumbUrl`（`:18789`）与 `downloadUrl`（`:18889`）分轨；Playwright PDF → 长按下载至 `Download/LittleHelper/`。详见 [Canvas 多模态文件下载](#canvas-多模态文件下载v2真机已验收) 与 [`scripts/_cursor_dev_multimodal_download_topic.txt`](scripts/_cursor_dev_multimodal_download_topic.txt)。
+完整英文 UI 计划在后续版本完善。英文用户可先读 [README.en.md](README.en.md)（草稿）。
 
 ---
 
 ## 快速开始
 
-### 1. 配置 `local.properties`
+### 1. 自建 Gateway（家里 PC + Tailscale）— 推荐
 
-复制 `local.properties.example` 为 `local.properties`（已在 `.gitignore`，不会提交）：
+适合：Gateway 跑在你家电脑或 NAS，手机通过 Tailscale 内网访问。
 
-```properties
-sdk.dir=C\:\\Users\\你的用户名\\AppData\\Local\\Android\\Sdk
+1. 在 Gateway 主机完成 **§3 [Gateway 配套安装](#3-gateway-配套安装)**（OpenClaw 首次配置 + Companion Bundle）。
+2. 手机安装 **Tailscale**，与主机在同一 tailnet。
+3. 安装 **龙爪** App（见 [§获取与编译](#获取与编译)）。
+4. **首次启动**会自动打开 **⚙️ 设置**（**不会**自动连接 Gateway，也不会在 Control UI 里产生配对申请）。
+5. 填写连接信息：
+   - **服务器地址**：主机 Tailscale IP（如 `100.x.x.x`）或局域网 IP
+   - **端口**：默认 `18789`
+   - **认证**：默认 **Token**；`openclaw config get gateway.auth.token` 或 Control UI `/pair qr`（UI 显示 `REDACTED` 时用 CLI）
+6. （可选）**界面语言** 选 **English** 或保持 **中文**。
+7. 点 **测试握手**：下方显示四步进度（Token → 配对 → 批准 → 连接）；按提示在 Control UI 批准设备。
+8. 点 **保存并连接**（主界面才发起长连接）。
+9. 连接成功后固定使用 **`agent:main:main`**。通知栏出现 **「Gateway 连接」**；建议系统设置 → 应用 → 龙爪 → 省电 → **无限制**。
 
-# OpenClaw Gateway（必填，当前主线）
-USE_OPENCLAW_SHELL=true
-USE_OPENCLAW_MOCK=false
-OPENCLAW_GATEWAY_HOST=192.168.1.55
-OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_GATEWAY_PASSWORD=你的Gateway密码
-OPENCLAW_GATEWAY_TOKEN=你的GatewayToken
+> **扫码连接**：设置页为灰色占位，**当前不支持**。
+
+### 2. 云端 Gateway（VPS + 公网）
+
+公网 `wss://` **当前不支持**。若用 VPS + `ws://` 自行验证可达性：
+
+1. 在 Gateway 主机完成 **§3 [Gateway 配套安装](#3-gateway-配套安装)**（同自建场景）。
+2. App 设置填入公网地址、端口 `18789`、Token/密码。
+3. **测试握手** → **保存并连接** → Control UI 批准设备。
+
+### 3. Gateway 配套安装
+
+完整体验需要 Gateway 主机上的 skill、Canvas、上传 sidecar 与 workspace 脚本。仓库提供 **Gateway Companion Bundle** 一键安装（**Windows Gateway only**；OpenClaw **>=2026.6.9**）。
+
+更细的 profile 说明、dev 多实例参数见 [gateway-bundle/README.md](gateway-bundle/README.md)。
+
+#### 前提条件
+
+1. **Node.js** 推荐 **24 LTS**（`npm i -g openclaw`）；装完 npm 后**重开 PowerShell**（PATH 刷新）
+2. **Python 3.10+**（install / doctor / upload sidecar / workspace 脚本）
+3. Win 11 默认禁脚本：`Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+4. OpenClaw **`>=2026.6.9`**
+
+> **安装 bundle 前**：请确认 `openclaw --version` **不低于 2026.6.9**。当前 `install.ps1` **不会**自动拦截低版本；版本过低可能导致握手或白板协议不兼容。
+
+#### 安装 OpenClaw（首次）
+
+```powershell
+openclaw setup
+openclaw onboard                              # 配置 API key 等
+openclaw config set gateway.bind "lan"       # 手机/Tailscale 连接必须；默认 loopback 仅本机
+openclaw gateway                               # 前台确认启动正常（勿先用 gateway start，可能静默失败）
 ```
 
-Mock 联调 UI（无需真实 Gateway）：
+> **⚠️ 禁止手动编辑 `openclaw.json` 的 gateway 项**（Token、bind、port 等）。用 `openclaw config set` / `openclaw configure`。  
+> bundle `install` **仅** merge **`skills.load.extraDirs`**；其余 Gateway 配置仍走 CLI。
 
-```properties
-USE_OPENCLAW_SHELL=true
-USE_OPENCLAW_MOCK=true
+#### 环境差异（常见，一般可忽略）
+
+| 现象 | 处理 |
+|------|------|
+| Node 安装时 `workload-vctools` / Python 组件失败 | 一般不影响 OpenClaw，可跳过 |
+| 中文用户名下 `.bat` 乱码 | upload sidecar **优先用 PowerShell**（见下方 `python ... upload_server.py`） |
+| Control UI 打不开或 404 | 路径为 **`/`**，不是旧版 `/ui` |
+| Token 在 UI 显示 `REDACTED` | `openclaw config get gateway.auth.token`，或 Control UI **`/pair qr`** |
+| 需要带 token 的 Control UI 链接 | `openclaw dashboard --no-open` |
+| `openclaw gateway start` 无反应 | 先用前台 **`openclaw gateway`** 验证；通过后再考虑后台/服务方式 |
+
+#### 安装 Companion Bundle
+
+**Release 产物（v2.1.3）**
+
+- 打包：`python scripts/build_gateway_bundle.py`
+- 输出：`dist/loongclaw-gateway-bundle-2.1.3.zip`
+
+**步骤（Gateway 管理员，PowerShell）**
+
+```powershell
+# 1. 解压
+Expand-Archive dist\loongclaw-gateway-bundle-2.1.3.zip -DestinationPath .
+cd loongclaw-gateway-bundle-2.1.3
+
+# 2. 安装 bundle（龙爪 App 默认即可，无需 patch client id）
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+# 仅 MODAL 核心：.\install.ps1 -Profile minimal
+# LoongClaw PC 客户端另需：.\install.ps1 -WithPcPatch
+
+# 3. 重启 openclaw gateway 后，另开终端启动 upload sidecar（standard 必做）
+python $env:USERPROFILE\.openclaw\companion\upload_server.py
+
+# 4. 自检
+.\doctor.ps1
 ```
 
-### 2. 编译安装
+`doctor` 全 `[OK]` 后，维护者发版前建议再过一遍 [bundle 回归清单](docs/BUNDLE_2.1.1_REMEDIATION.md#六下一版-bundle-回归清单15-分钟)（PDF 预览、文件删除、`save_to_storage` 进画廊等，约 15 分钟）。
+
+全部 `[OK]` 后，手机侧：
+
+1. 安装龙爪 App（见 [§获取与编译](#获取与编译)）
+2. `ipconfig` 查 Gateway 主机局域网 / Tailscale IP
+3. Token：`openclaw config get gateway.auth.token` 或 Control UI `/pair qr`
+4. App **⚙️ 设置** → 填地址/端口/Token → **测试握手** → **保存并连接**
+
+龙爪 App 使用内置 **`openclaw-android`**，**不必** `-WithPcPatch`。PC 客户端白名单见 [gateway-bundle/config/CLIENT_ID_SETUP.md](gateway-bundle/config/CLIENT_ID_SETUP.md)。
+
+**`standard` profile（默认）包含：**
+
+| 类型 | 内容 | 说明 |
+|------|------|------|
+| 核心 skill | `littlehelper-modal` | MODAL 白板协议（**必装**） |
+| 参考 skill | `gallery-display`、`file-viewer-display`、`file-manager`、`notepad`、`weather-display` | Agent 指令（`SKILL.md`）；配合下方 workspace 脚本使用 |
+| Sidecar | `upload_server.py`（`:18889`） | 上传 / 下载 / 画廊长按保存 |
+| Workspace 脚本 | `generate_gallery.py`、`file_viewer.py`、`file_reader.py`、`file_manager.py`、`notepad.py`、`weather_card.py` | 装到 `~/.openclaw/workspace/scripts/` |
+| Agent 规则 | `AGENTS.md` 注入 | install 幂等追加龙爪客户端路由（`openclaw-android` → `===CHAT===` + `===MODAL===`） |
+
+`minimal` profile 仅含 `littlehelper-modal`（无 sidecar、无参考 skill、**不含地图 canvas**）。详见 [gateway-bundle/README.md](gateway-bundle/README.md) 与 [GATEWAY_COMPANION_BUNDLE_PLAN.md](docs/GATEWAY_COMPANION_BUNDLE_PLAN.md)。
+
+未跑 bundle 时，至少需手动安装 [littlehelper-modal](scripts/skills/littlehelper-modal/SKILL.md) 才能正常弹出白板。
+
+---
+
+## 获取与编译
+
+### 从 Release 安装
+
+使用 GitHub Release 中的 **`app-release.apk`**（或 `app-release-unsigned.apk` 自行签名）与 **`loongclaw-gateway-bundle-2.1.3.zip`**。  
+**真机开发验收**可用 Debug 包：`app/build/outputs/apk/debug/app-debug.apk`。
+
+**维护者打 Release 包（v2.1.3）**
+
+```powershell
+python scripts/build_gateway_bundle.py
+.\gradlew assembleRelease
+# APK: app\build\outputs\apk\release\app-release-unsigned.apk（需 keystore 签名后对外分发）
+# Zip: dist\loongclaw-gateway-bundle-2.1.3.zip
+```
+
+在 GitHub 创建 **v2.1.3** Release，将上述 APK 与 zip 作为附件上传；Release 说明可摘录 [CHANGELOG.md](CHANGELOG.md) 中 2.1.3 条目。发版前建议对照 [bundle 回归清单](docs/BUNDLE_2.1.1_REMEDIATION.md#六下一版-bundle-回归清单15-分钟) 与 [2.1.3 回归要点](docs/SYSTEM_CANVAS_PLAN.md#213-回归要点发布前) 做最后一次真机确认。
+
+> Release 包需正式签名后才能对外分发；本地 `assembleRelease` 若未配置 keystore，输出为 **unsigned**（可与 debug 签名二选一用于内测）。详见 [docs/DEVELOPER.md](docs/DEVELOPER.md)。
+
+### 开发者编译
 
 ```bat
-cd d:\Dev\LittleHelper
+git clone <本仓库>
+cd LittleHelper
+copy local.properties.example local.properties
+:: 编辑 local.properties：至少填写 sdk.dir
 gradlew.bat assembleDebug
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-### 3. 运行单元测试
-
-```bat
-gradlew.bat testDebugUnitTest
-```
-
-报告：`app/build/reports/tests/testDebugUnitTest/index.html`
+- **Gateway 地址、Token、密码** 仅保存在 App 内（`EncryptedSharedPreferences`），**不会**写入 APK 或 `local.properties`。
+- 未保存设置前 **不会** 自动连接 Gateway。
+- 单元测试：`gradlew.bat test`
 
 ---
 
-## 配置说明
+## 连接与设置
 
-| 配置项 | 作用 | 是否必填 |
-|--------|------|----------|
-| `USE_OPENCLAW_SHELL` | `true` 启用 Gateway 壳模式 | **是**（当前主线） |
-| `USE_OPENCLAW_MOCK` | `true` 使用 Mock 客户端 | 联调时可选 |
-| `OPENCLAW_GATEWAY_HOST` | Gateway IP / 域名 | 实连时必填 |
-| `OPENCLAW_GATEWAY_PORT` | Gateway 端口（默认 18789） | 实连时必填 |
-| `OPENCLAW_GATEWAY_PASSWORD` | Gateway 连接密码 | 按 Gateway 配置 |
-| `OPENCLAW_GATEWAY_TOKEN` | Gateway Token | 按 Gateway 配置 |
-| `DEEPSEEK_API_KEY` | 本地 DeepSeek | **已废弃**，可留空 |
-| `VOLC_*` | 火山 ASR | **已停用**，代码保留未接入主链路 |
-| `AMAP_API_KEY` | 高德 SDK | **已移除**，无需配置 |
+### 设置页包含什么
 
-编译开关写入 `BuildConfig`，由 `OpenClawSessionClientFactory` 在启动时选择 Mock 或 WebSocket 客户端。
+| 区块 | 内容 |
+|------|------|
+| **Gateway 连接** | 地址、端口、Token/密码、测试握手、保存并连接 |
+| **界面语言** | 中文 / English |
+| **声音** | Gateway 语音播报（TTS）开关 |
+
+**已移除（v2.1 不再提供）**
+
+- ~~助手语气~~（人设由 Gateway Agent / skill 决定）
+- ~~智能体名称~~（产品固定 `main`；进阶见下文）
+
+### 配置存储
+
+| 行为 | 说明 |
+|------|------|
+| 存储位置 | 本机加密 SharedPreferences |
+| 首次安装 | 自动打开设置；不后台连 Gateway |
+| 真正连上 | 点 **保存并连接** 后启动 WebSocket + 前台 Service |
+| 测试握手 | 独立短连接，仅设置页验证；显示四步进度 |
+
+### 连接保活与通知
+
+- WebSocket 长连接（空闲仅心跳，**不消耗大模型 Token**）
+- 低优先级通知：「正在连接 Gateway…」→「已连接 Gateway」
+- 主界面 **绿灯** = 在线；**橙灯闪烁** = 连接中
+- 国产 ROM 建议：**省电 → 无限制**
+
+### 设置项 ↔ Gateway 配置
+
+| 设置项 | 对应 Gateway |
+|--------|--------------|
+| 协议 | WebSocket（固定） |
+| 认证 | `gateway.auth.mode` / token / password |
+| 地址 / 端口 | 可达的 bind 地址与 `gateway.port`（默认 18789） |
+
+### 测试握手 · 四步进度
+
+```
+═══════ 设备握手进度 ═══════
+① Token 验证
+② 设备配对审批
+③ 批准检测
+④ 建立连接
+```
+
+- **Token 错误**：停在 ①
+- **待配对**：① 过，② 等待；可展开 **设备 ID** 到 Control UI → **Devices** 对照批准
+- **限流**：④ 失败，稍等 1–2 分钟再试
+
+主界面连接失败横幅与测试握手 **共用** 错误映射（**中文**文案）。
+
+### App 内置（不在设置里改）
+
+| 项 | 值 |
+|----|-----|
+| `client.id` | `openclaw-android` |
+| `client.mode` | `ui` |
+| `role` | `operator` |
+| sessionKey | **`agent:main:main`** |
+| Canvas / 上传 HTTP | `http://{host}:18789` / `:18889` |
+| 下载目录 | **`Download/LoongClaw/`** |
+
+握手设计：[openclaw_client_handshake_guide.md](docs/openclaw_client_handshake_guide.md)（扫码章节为历史草案）。
+
+---
+
+## Gateway 会话与协议
+
+保存并连接后，App 自动执行：
+
+```
+WebSocket connect（hello-ok）
+  → sessions.messages.subscribe
+  → chat.send（用户消息）
+  → 接收 chat.delta、session.message
+```
+
+> 必须 **subscribe**，否则发得出消息但收不到回复。
+
+助手若要打开白板，Gateway 须按双线协议回复（**勿**加 `===END===`）：
+
+```
+===CHAT===
+一句话摘要
+
+===MODAL===
+{"action":"open","blocks":[...]}
+```
+
+完整契约：[docs/OPENCLAW_GATEWAY_CONTRACT.md](docs/OPENCLAW_GATEWAY_CONTRACT.md)
+
+---
+
+## 进阶：多 Agent（代码级，默认未启用）
+
+面向自托管开发者；**不是**当前产品主推场景。
+
+| 模块 | 路径 |
+|------|------|
+| 产品策略 | `app/.../settings/AgentSessionPolicy.kt`（`PRODUCT_AGENT_NAME = "main"`） |
+| sessionKey | `app/.../settings/SessionKeyResolver.kt` → `agent:{name}:main` |
+| 设置 UI（已隐藏） | 可恢复 `GatewaySettingsSheet` 中智能体名称输入框 |
+| Gateway 搭建 | [docs/multi_agent_gateway_setup.md](docs/multi_agent_gateway_setup.md) |
+
+> **⚠️ `agents.list` 陷阱**：若在 `openclaw.json` 里**新增**家庭成员 agent，必须把 **`main` 也显式写在 list 里**（见搭建文档示例）。只写新 id、漏写 `main` 时，Gateway 重启后默认主 agent 可能被覆盖，龙爪与 Control UI 主会话会异常。龙爪 App 默认固定连 `agent:main:main`。
+
+---
+
+## 架构概览
+
+```
+┌─────────────┐   WebSocket    ┌──────────────────┐
+│   龙爪 App   │ ◄──────────► │ OpenClaw Gateway │
+│ 聊天+白板+文件│ chat.send +  │ Agent+Canvas+上传 │
+│              │  subscribe   │                  │
+└─────────────┘              └──────────────────┘
+```
+
+- **进程级连接**：`GatewayConnectionManager` + `GatewayConnectionService`（前台保活）
+- **Shell**：`SessionReducer` 归约事件；`MessageBlockParser` 解析 MODAL
+- **传输**：`WebSocketOpenClawSessionClient`、device-auth v3
+
+开发者细节：[docs/DEVELOPER.md](docs/DEVELOPER.md)
 
 ---
 
@@ -519,170 +354,89 @@ gradlew.bat testDebugUnitTest
 
 ```
 LittleHelper/
-├── docs/
-│   └── OPENCLAW_GATEWAY_CONTRACT.md # App ↔ Gateway 集成契约
-├── scripts/
-│   ├── upload_server.py             # 文件上传 HTTP 服务 (:18889)
-│   ├── process_upload.py            # 解析 [upload:…] 并拉取文件
-│   ├── openclaw_dev_session.py      # Cursor dev 协调通道
-│   ├── publish_littlehelper_gateway_skill.py
-│   ├── fetch_canvas.py
-│   ├── gateway_whiteboard_test_plan.txt
-│   ├── webview_spec_test.html       # Canvas 能力测试页（同步到 Gateway）
-│   └── skills/littlehelper-modal/SKILL.md
-├── app/src/main/java/com/littlehelper/
-│   ├── MainActivity.kt              # 入口：权限、Compose、TTS 绑定
-│   ├── AppModels.kt                 # AppPhase、ChatMessage、PanelState 等
-│   ├── chat/                        # ChatHistoryStore 本地会话持久化
-│   ├── attachment/                  # PickedAttachment、AttachmentSizeValidator
-│   ├── media/                       # StoredFileDownloader、LittleHelperFileSaver、MyFilesRepository
-│   ├── upload/                      # FileUploadManager
-│   ├── viewmodel/
-│   │   └── MainViewModel.kt         # Gateway 连接、发送、TTS、面板/历史状态
-│   ├── shell/
-│   │   ├── model/                   # ShellUiState、ClawSessionEvent、ModulePayload
-│   │   ├── modal/                   # ModalState、ModalHistory*、ModalHistoryStore
-│   │   ├── session/                 # SessionController、SessionReducer
-│   │   ├── transport/               # WebSocket 客户端、Gateway 映射、设备鉴权
-│   │   ├── parser/                  # MessageBlockParser
-│   │   ├── modules/                 # ModuleHost、ModalCanvasHost、Amap*、ModalHistorySwipeGesture
-│   │   ├── projection/              # ShellUiProjector
-│   │   └── demo/                    # Mock 演示数据（持仓 MODAL）
-│   ├── ui/
-│   │   ├── MainScreen.kt            # 主界面 Column 布局
-│   │   ├── layout/
-│   │   │   ├── ChatFlowSection.kt   # 聊天列表 + Gateway 指示灯
-│   │   │   ├── MultiFunctionPanel.kt# 底部 MODAL 抽屉
-│   │   │   ├── ChatInputBar.kt      # 输入栏 + 附件、已选 × 取消
-│   │   │   ├── FilePickerSheet.kt   # 拍照/相册/文件 BottomSheet
-│   │   │   └── OpenClawStatusBanner.kt
-│   │   ├── attachment/              # AttachmentFileReader（URI → bytes）
-│   │   └── components/              # ChatBubble、GatewayConnectionDot 等
-│   ├── network/                       # Volc ASR 代码保留（未接入主链路）
-│   ├── speech/                      # AudioRecorderManager 保留（未接入主链路）
-│   └── tts/TtsManager.kt
-├── app/src/test/java/com/littlehelper/
-│   └── shell/ …                     # SessionReducer、Gateway、MODAL 单测
-├── local.properties.example
-└── README.md
+├── app/                         # Android（Kotlin + Compose）
+│   └── src/main/res/
+│       ├── values/strings.xml   # 中文（默认）
+│       └── values-en/           # 部分界面英文
+├── gateway-bundle/              # Gateway 配套 install/doctor 源
+├── dist/                        # build_gateway_bundle.py 输出 zip
+├── docs/                        # 契约、握手、Bundle 计划等
+├── scripts/                     # skill 源、打包与联调脚本
+├── README.md                    # 本文件（中文，主文档）
+├── README.en.md                 # 英文说明（机翻草稿 + 已知限制）
+└── CHANGELOG.md
 ```
 
 ---
 
-## 技术栈
+## 常见问题
 
-| 类别 | 技术 |
-|------|------|
-| 语言 | Kotlin |
-| 最低 SDK | 24（Android 7.0） |
-| 目标 SDK | 36 |
-| UI | Jetpack Compose（Material3） |
-| 架构 | ViewModel + StateFlow；`SessionReducer` 纯函数归约 |
-| 网络 | OkHttp WebSocket；Gateway v4 协议 |
-| 多模态 | Compose + Android WebView |
-| 语音播报 | Android TextToSpeech |
-| 测试 | JUnit 4 |
+**连不上 / 一直「连接中」**  
+查地址、Tailscale/局域网、Gateway 是否启动、防火墙。用 **测试握手** 看卡在哪一步。
 
-**已移除依赖：** Room、KSP、高德 3D 地图 SDK、pinyin4j
+**发消息无回复**  
+须已 **保存并连接** 且 subscribe 成功。重启 App 或重测握手。确认 Gateway 与 Token 正常。
 
----
+**白板不显示**  
+Gateway 回复须含 `===MODAL===` 合法 JSON；不要 `===END===`。确认已装 `littlehelper-modal` skill。
 
-## 开发与测试
+**切换 English 后部分仍是中文**  
+见 [§界面语言](#界面语言v213)；连接横幅与主聊天壳暂未英文化。
 
-### Gateway / Canvas 脚本
+**通知栏一直「Gateway 连接」**  
+保存并连接后的正常行为（前台 Service）。不需要时可 Force Stop 或限制后台。
 
-| 脚本 | 用途 |
-|------|------|
-| `scripts/openclaw_dev_session.py` | Cursor ↔ Gateway 开发协调（`agent:main:cursor-dev`） |
-| `scripts/run_dev_session_lan.py` | 局域网 dev session（传 topic 文件路径） |
-| `scripts/_cursor_dev_multimodal_download_topic.txt` | 多模态下载协议（图片/PDF/游记，真机基线） |
-| `scripts/publish_littlehelper_gateway_skill.py` | 推送 MODAL 规范 skill 到 Gateway |
-| `scripts/fetch_canvas.py` | 检查 Canvas HTTP 是否 200 |
-| `scripts/upload_server.py` | 启动 Gateway 伴生上传服务（`:18889`） |
-| `scripts/process_upload.py` | 调试：从消息 `[upload:…]` 拉取并打印文件内容 |
-| `scripts/gateway_whiteboard_test_plan.txt` | T1–T9 白板测试计划（联调记录） |
+**息屏后掉线**  
+省电设为 **无限制**；回前台会自动重连。
 
-### 单元测试覆盖重点
+**提示待配对**  
+Control UI → **Devices** → 批准；对照设置页或横幅中的 **设备 ID**。
 
-| 测试类 | 覆盖范围 |
-|--------|----------|
-| `SessionReducerTest` | Gateway 事件归约、MODAL 开/关、流式去重 |
-| `MessageBlockParserTest` | CHAT/MODAL/END 线框解析 |
-| `GatewayEventMapperTest` | Gateway JSON → `ClawSessionEvent` |
-| `ModalStateReducerTest` | MODAL 状态归约 |
-| `WebViewBlockRendererTest` | WebView 块 URL 与布局 |
-| `OpenClawConnectHandshakeTest` | connect 握手 |
-| `OpenClawDeviceAuthTest` | Ed25519 设备鉴权 |
-| `GatewayCanvasAuthTest` | Canvas WebView 鉴权头 |
-| `TableBlockRendererTest` | table headers/rows 解析（含简写格式） |
-| `ModalCanvasUrlResolverTest` | Canvas URL 拼接与绝对地址改写 |
-| `ModalHistoryStoreTest` | 白板历史持久化与体积裁剪 |
-| `ModalHistoryReducerTest` | 白板历史队列、满 10 页切换、索引校正、删除 |
-| `ModalHistorySwipeGestureTest` | 翻页手势轴向判定（横/纵位移比） |
-| `AttachmentSizeValidatorTest` | 附件体积上限（图片/PDF/其他） |
-| `FileUploadManagerTest` | 上传响应 JSON 解析 |
-| `AmapDeepLinkTest` | 高德 scheme 识别与 H5 降级 URL |
-| `AmapCanvasInjectorTest` | Canvas 注入白名单与路径判断 |
-| `ChatHistoryStoreTest` | 会话持久化与上限裁剪 |
-| `VolcAsrBinaryProtocolTest` | 火山 v3 协议（遗留，未接主链路） |
+**Token 错 vs 待配对**  
+Token 错只失败在 ①；勿在 Token 错误时反复改配对。
 
-```bat
-gradlew.bat testDebugUnitTest
-```
+**下载文件在哪**  
+`Download/LoongClaw/`；App 内 **我的文件** 可浏览删除。
+
+**聊天历史丢了**  
+存在 App 私有目录；清数据或卸载会丢失。
+
+**修改 Gateway 地址后上传仍走旧 IP**  
+设置里重新 **保存并连接**。
+
+更多排错：[docs/DEVELOPER.md](docs/DEVELOPER.md) · 版本历史：[CHANGELOG.md](CHANGELOG.md)
 
 ---
 
-## 权限说明
+## 相关文档
 
-| 权限 | 用途 |
+| 文档 | 用途 |
 |------|------|
-| `INTERNET` | 连接 OpenClaw Gateway；WebView 加载远程页面；HTTP 上传文件 |
-| `ACCESS_NETWORK_STATE` / `ACCESS_WIFI_STATE` | 网络状态检测 |
-| `POST_NOTIFICATIONS` | 预留（当前无本地提醒功能） |
-| `CAMERA` | 附件菜单「拍照」 |
-| `READ_MEDIA_IMAGES` | 附件菜单「从相册选择」（API 33+） |
-
-Manifest `<queries>` 声明：`com.autonavi.minimap`（高德 App 是否已安装）、TTS 服务。
-
-**已移除权限：** `RECORD_AUDIO`、定位、精确闹钟、开机广播等（随 Native 地图 / 提醒模块一并删除）。
+| [OPENCLAW_GATEWAY_CONTRACT.md](docs/OPENCLAW_GATEWAY_CONTRACT.md) | App ↔ Gateway 契约 |
+| [GATEWAY_COMPANION_BUNDLE_PLAN.md](docs/GATEWAY_COMPANION_BUNDLE_PLAN.md) | 配套包分发计划 |
+| [SYSTEM_CANVAS_PLAN.md](docs/SYSTEM_CANVAS_PLAN.md) | 2.2 系统白板（文件库/相册 Tab）规划 |
+| [gateway-bundle/README.md](gateway-bundle/README.md) | install / doctor 用户指南 |
+| [BUNDLE_2.1.1_REMEDIATION.md](docs/BUNDLE_2.1.1_REMEDIATION.md) | Bundle 整改记录与 **发版回归清单** |
+| [DEVELOPER.md](docs/DEVELOPER.md) | 贡献者与联调 |
 
 ---
 
-## 已知限制与后续方向
+## 联系
 
-### 已知限制
-
-1. **聊天持久化**：写入本地 JSON；`isPartial` 流式条不保存；清数据 / 卸载后丢失
-2. **Gateway 离线**：10s 静默重连；超时后显示 Banner，需用户点重试
-3. **WebView 仅支持 URL**：不支持 inline HTML 字符串（`loadData`）；Gateway 需提供可访问 HTTP(S) 地址
-4. **白板历史上限**：内存与磁盘均最多 10 页快照，超出丢弃最旧；清数据 / 卸载后丢失。在最新页只能右滑看更早页，在最早页只能左滑看更新页
-5. **可滚动白板页**：WebView 内横向拖动由页面消费，可能无法触发历史翻页；请在白板边缘或底栏区域做明显横向滑动
-6. **MODAL `action: update`**：T8 真机已通过；复杂场景仍可能整板刷新
-7. **助手语气设置**：`AssistantToneStore` 与设置 Sheet 代码保留，入口待统一 Settings 页
-8. **Gateway 规范持久化**：需 `python scripts/publish_littlehelper_gateway_skill.py` 推送 skill；见 [`docs/OPENCLAW_GATEWAY_CONTRACT.md`](docs/OPENCLAW_GATEWAY_CONTRACT.md)
-9. **契约文档滞后**：`docs/OPENCLAW_GATEWAY_CONTRACT.md` 仍缺画廊 v2、原图下载分轨等（以本 README 与 `scripts/_cursor_dev_*_topic.txt` 联调记录为准）
-
-### 后续方向
-
-- [ ] Gateway skill 自动加载路径复查（`workspace/skills/littlehelper-modal/SKILL.md`）
-- [ ] MODAL `type: map` 专用块（当前用 webview + HTML）
-- [ ] App 设置页（Gateway 地址、助手语气等）
-- [ ] Gateway thinking 状态细粒度 UI 反馈
-
----
-
-## 历史版本说明
-
-| 版本 | 说明 |
-|------|------|
-| **v1.0** | 纯语音记事本（DeepSeek + Room） |
-| **v2.0（早期）** | 叠加 Native 高德地图、本地提醒、火山 ASR 按住说话、DeepSeek 秘书 |
-| **v2.0（当前）** | **OpenClaw 哑终端壳**：2026-06-22 T1–T9 联调；**2026-06-23** 品牌「龙虾助手」、聊天/白板本地持久化、白板 Story 历史、高德标题栏入口；**2026-06-25** 白板翻页手势、冷启动面板默认收起、文件上传 v1、画廊 v2 长按下载至 `Download/LittleHelper`、**我的文件** 入口 |
-
-旧版 LOCAL 模式相关文档（DB_OPS 协议、高德 VIEW_LOCATION、Reminder 调度等）已从代码库删除；若需查阅历史设计，见 Git 历史或 `docs/` 目录（如有保留）。
+反馈、问题与合作：**[laomianhua@agent.qq.com](mailto:laomianhua@agent.qq.com)**
 
 ---
 
 ## 许可证
 
-本项目为个人/家庭使用场景开发，API Key 与 Gateway 凭证请自行保管，勿提交到公开仓库。
+本项目采用 **[MIT License](LICENSE)** 开源。
+
+- 你可以自由使用、修改、再分发本仓库代码（包括商用），但须保留版权声明与许可全文。
+- **LoongClaw（龙爪）** 为独立社区客户端，与 [OpenClaw](https://github.com/openclaw/openclaw) 官方无隶属关系；OpenClaw 及相关名称归其各自权利人所有。
+
+### 免责声明
+
+- 本软件按 **「现状」（AS IS）** 提供，**不提供**任何明示或默示担保（包括适销性、特定用途适用性、与 Gateway 的持续兼容性等）。
+- 龙爪连接的是你或第三方自托管的 **OpenClaw Gateway**；Gateway 地址、Token、API Key、对话与文件内容由**用户自行配置与承担**，开发者不对 Gateway 侧行为或第三方服务负责。
+- 在适用法律允许的最大范围内，作者对因使用或无法使用本软件而产生的任何直接、间接或附带损失**不承担责任**。
+- 贡献者与用户请勿将 API Key、Gateway Token 等敏感信息提交到公开仓库。

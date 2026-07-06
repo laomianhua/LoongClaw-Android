@@ -7,7 +7,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.littlehelper.shell.model.ClawSessionEvent
 import com.littlehelper.shell.model.ConnectionState
-import com.littlehelper.settings.AssistantToneStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -26,6 +25,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,16 +33,25 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * OpenClaw Gateway WebSocket 客户端（协议 v4）。
  *
- * Stage 1：connect → sessions.messages.subscribe → sessions.send / 收 session.message 等事件。
- * Stage 2：talk.session.create → startTurn → appendAudio → endTurn → close。
+ * 消息：connect → hello-ok → sessions.messages.subscribe → chat.send
+ * 语音：talk.session.create → startTurn → appendAudio → endTurn → close。
  */
 class WebSocketOpenClawSessionClient(
-    private val config: GatewayConfig,
+    initialConfig: GatewayConfig,
     private val identityStore: OpenClawDeviceIdentityStore,
-    private val toneStore: AssistantToneStore,
     private val scope: CoroutineScope,
     private val gson: Gson = Gson(),
 ) : OpenClawSessionClient {
+
+    @Volatile
+    private var config: GatewayConfig = initialConfig
+
+    fun updateConfig(newConfig: GatewayConfig) {
+        config = newConfig
+        messagesSubscribedKey = null
+    }
+
+    fun currentConfig(): GatewayConfig = config
 
     private var helloPolicy: OpenClawConnectHandshake.GatewayHelloPolicy =
         OpenClawConnectHandshake.GatewayHelloPolicy()
@@ -69,6 +78,7 @@ class WebSocketOpenClawSessionClient(
     private var connectDeferred: CompletableDeferred<String>? = null
     private var sessionConnId: String? = null
     private var messagesSubscribedKey: String? = null
+    private var pendingMessagesSubscribe: CompletableDeferred<Boolean>? = null
     private var activeTurnId: String? = null
     /** talk.session.create 返回的 id，与 agent sessionKey 不同。 */
     private var activeTalkSessionId: String? = null
@@ -83,6 +93,7 @@ class WebSocketOpenClawSessionClient(
 
     override suspend fun connect() {
         if (_connectionState.value == ConnectionState.ONLINE) return
+        if (!config.isConnectable) return
 
         disconnect()
         emitConnectionState(ConnectionState.CONNECTING)
@@ -109,11 +120,9 @@ class WebSocketOpenClawSessionClient(
             }
         } catch (e: Exception) {
             emitConnectionState(ConnectionState.DEGRADED)
-            val pairing = e.message?.contains("待配对") == true
-            if (!pairing) {
-                _events.emit(
-                    ClawSessionEvent.SessionError("Gateway 连接失败: ${e.message}")
-                )
+            if (e !is ConnectFailedException) {
+                val presentation = GatewayConnectErrorMapper.mapThrowable(e)
+                _events.emit(presentation.toSessionError())
             }
             disconnect()
             throw e
@@ -128,6 +137,8 @@ class WebSocketOpenClawSessionClient(
         webSocket = null
         sessionConnId = null
         messagesSubscribedKey = null
+        pendingMessagesSubscribe?.cancel()
+        pendingMessagesSubscribe = null
         activeTurnId = null
         activeTalkSessionId = null
         pendingTalkCreates.clear()
@@ -182,20 +193,17 @@ class WebSocketOpenClawSessionClient(
         sendRawMessage(text.trim())
     }
 
-    override suspend fun syncAssistantInstructions(instructions: String) {
-        // 语气设置功能暂缓，待统一 Settings 模块时再实现
-    }
-
     private suspend fun sendRawMessage(text: String) {
         ensureOnline()
         sendRequest(
-            method = OpenClawGatewayMethods.SESSIONS_SEND,
+            method = OpenClawGatewayMethods.CHAT_SEND,
             params = JsonObject().apply {
-                addProperty("key", config.mainSessionKey)
+                addProperty("sessionKey", config.mainSessionKey)
                 addProperty("message", text)
+                addProperty("idempotencyKey", UUID.randomUUID().toString())
             }
         )
-        Log.d(TAG, "sessions.send chars=${text.length}")
+        Log.d(TAG, "chat.send chars=${text.length} key=${config.mainSessionKey}")
     }
 
     private suspend fun createTalkSession(turnId: String): String {
@@ -226,15 +234,28 @@ class WebSocketOpenClawSessionClient(
     }
 
     private suspend fun subscribeSessionMessages() {
-        if (messagesSubscribedKey == config.mainSessionKey) return
+        val key = config.mainSessionKey
+        if (messagesSubscribedKey == key) return
+        val deferred = CompletableDeferred<Boolean>()
+        pendingMessagesSubscribe = deferred
+        Log.d(TAG, "sessions.messages.subscribe send key=$key")
         sendRequest(
             method = OpenClawGatewayMethods.SESSIONS_MESSAGES_SUBSCRIBE,
+            requestId = SESSION_SUBSCRIBE_REQ_ID,
             params = JsonObject().apply {
-                addProperty("key", config.mainSessionKey)
+                addProperty("key", key)
             }
         )
-        messagesSubscribedKey = config.mainSessionKey
-        Log.d(TAG, "messages subscribed: ${config.mainSessionKey}")
+        try {
+            withTimeout(SESSION_SUBSCRIBE_TIMEOUT_MS) {
+                deferred.await()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "sessions.messages.subscribe timeout/fail key=$key err=${e.message}")
+            throw e
+        }
+        messagesSubscribedKey = key
+        Log.d(TAG, "messages subscribed: $key")
     }
 
     private suspend fun ensureOnline() {
@@ -278,7 +299,7 @@ class WebSocketOpenClawSessionClient(
         }
         val identity = identityStore.loadOrCreateIdentity()
         val storedDeviceToken = identityStore.getDeviceToken(config.connectRole)
-        val authToken = OpenClawDeviceAuth.resolveAuthToken(config, storedDeviceToken)
+        val authToken = OpenClawDeviceAuth.resolveAuthCredential(config, storedDeviceToken)
         val signedDevice = OpenClawDeviceAuth.buildSignedDevice(
             identity = identity,
             config = config,
@@ -327,8 +348,11 @@ class WebSocketOpenClawSessionClient(
             connectDeferred?.completeExceptionally(t)
             pendingTalkCreates.values.forEach { it.completeExceptionally(t) }
             pendingTalkCreates.clear()
+            pendingMessagesSubscribe?.completeExceptionally(t)
+            pendingMessagesSubscribe = null
             scope.launch {
-                _events.emit(ClawSessionEvent.SessionError("Gateway 断开: ${t.message}"))
+                val presentation = GatewayConnectErrorMapper.mapThrowable(t)
+                _events.emit(presentation.toSessionError())
             }
         }
 
@@ -366,7 +390,7 @@ class WebSocketOpenClawSessionClient(
 
         val sessionId = sessionConnId ?: config.mainSessionKey
         GatewayEventMapper.mapGatewayMessage(gson.toJson(root), sessionId)?.let { event ->
-            if (eventName == "session.message") {
+            if (eventName == "session.message" || eventName == "chat.delta") {
                 val preview = when (event) {
                     is ClawSessionEvent.ChatFinal -> event.text
                     is ClawSessionEvent.ChatDelta -> event.text
@@ -376,7 +400,7 @@ class WebSocketOpenClawSessionClient(
                     com.littlehelper.shell.parser.MessageBlockParser.hasModalDirective(preview)
                 Log.d(
                     TAG,
-                    "session.message mapped chars=${preview.length} modal=$hasModal preview=${preview.take(48)}"
+                    "$eventName mapped chars=${preview.length} modal=$hasModal preview=${preview.take(48)}"
                 )
             }
             _events.emit(event)
@@ -422,18 +446,35 @@ class WebSocketOpenClawSessionClient(
                     return
                 }
                 val deviceId = identityStore.loadOrCreateIdentity().deviceId
-                val pairing = OpenClawConnectHandshake.isPairingError(errorObj)
-                val message = OpenClawConnectHandshake.formatConnectError(errorObj, deviceId)
+                val hasDeviceToken = !identityStore.getDeviceToken(config.connectRole).isNullOrBlank()
+                val presentation = GatewayConnectErrorMapper.mapGatewayError(
+                    error = errorObj,
+                    deviceId = deviceId,
+                    hasStoredDeviceToken = hasDeviceToken,
+                    credentialUsed = if (hasDeviceToken) {
+                        CredentialKind.DEVICE
+                    } else {
+                        CredentialKind.SHARED
+                    },
+                )
+                Log.w(
+                    TAG,
+                    "connect failed kind=${presentation.kind} code=${presentation.gatewayCode} " +
+                        "credential=${if (hasDeviceToken) "device" else "shared"} " +
+                        "device=${deviceId.take(12)}…"
+                )
                 scope.launch {
-                    _events.emit(
-                        ClawSessionEvent.SessionError(
-                            message = message,
-                            pairingRequired = pairing
-                        )
-                    )
+                    _events.emit(presentation.toSessionError())
                 }
-                connectDeferred?.completeExceptionally(IllegalStateException(message))
+                connectDeferred?.completeExceptionally(
+                    ConnectFailedException(presentation, deviceId)
+                )
             }
+            return
+        }
+
+        if (id == SESSION_SUBSCRIBE_REQ_ID) {
+            completeMessagesSubscribe(ok, root.getAsJsonObject("error"))
             return
         }
 
@@ -458,12 +499,10 @@ class WebSocketOpenClawSessionClient(
         }
 
         if (!ok) {
+            val errorObj = root.getAsJsonObject("error")
+            val presentation = GatewayConnectErrorMapper.mapGatewayError(errorObj)
             scope.launch {
-                _events.emit(
-                    ClawSessionEvent.SessionError(
-                        message = root.get("error")?.toString() ?: "Gateway 请求失败: $id"
-                    )
-                )
+                _events.emit(presentation.toSessionError())
             }
             return
         }
@@ -473,13 +512,39 @@ class WebSocketOpenClawSessionClient(
         }
     }
 
+    private fun completeMessagesSubscribe(ok: Boolean, error: JsonObject?) {
+        val deferred = pendingMessagesSubscribe
+        if (deferred == null) {
+            Log.w(
+                TAG,
+                "sessions.messages.subscribe stray/late res ok=$ok err=${error?.get("message")?.asString} " +
+                    "(no pending waiter — likely timed out earlier)"
+            )
+            return
+        }
+        pendingMessagesSubscribe = null
+        if (ok) {
+            Log.d(TAG, "sessions.messages.subscribe res ok=true")
+            deferred.complete(true)
+            return
+        }
+        val message = error?.get("message")?.asString.orEmpty()
+        Log.w(TAG, "sessions.messages.subscribe res ok=false err=$message")
+        val presentation = GatewayConnectErrorMapper.mapGatewayError(error)
+        deferred.completeExceptionally(
+            ConnectFailedException(presentation)
+        )
+    }
+
     private fun JsonObject.extractTalkSessionId(): String? =
         get("sessionId")?.takeIf { !it.isJsonNull }?.asString
 
     companion object {
         private const val TAG = "OpenClawWS"
-        private const val CONNECT_TIMEOUT_MS = 15_000L
+        private const val CONNECT_TIMEOUT_MS = 25_000L
+        private const val SESSION_SUBSCRIBE_TIMEOUT_MS = 8_000L
         private const val TALK_CREATE_TIMEOUT_MS = 10_000L
         private const val MAX_CONNECT_UNAVAILABLE_RETRIES = 8
+        private const val SESSION_SUBSCRIBE_REQ_ID = "sess_subscribe"
     }
 }

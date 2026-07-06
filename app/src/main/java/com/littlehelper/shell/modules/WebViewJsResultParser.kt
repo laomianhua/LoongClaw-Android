@@ -55,7 +55,8 @@ internal object WebViewJsResultParser {
     ) {
         fun toAsset(): StoredImageAsset? {
             val url = StoredImageDownloadUrlResolver.normalizeHostPlaceholder(
-                downloadUrl?.trim().orEmpty()
+                downloadUrl?.trim().orEmpty(),
+                com.littlehelper.shell.transport.GatewayRuntime.uploadHost(),
             )
             if (url.isEmpty()) return null
             val storageName = fileName?.trim().orEmpty()

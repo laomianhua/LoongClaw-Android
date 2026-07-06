@@ -1,5 +1,7 @@
 package com.littlehelper.shell.transport
 
+import com.littlehelper.settings.GatewayAuthMode
+
 /**
  * Gateway device-auth 签名载荷（OpenClaw gateway-client device-auth v3）。
  */
@@ -7,10 +9,21 @@ object OpenClawDeviceAuth {
 
     private val OPERATOR_SCOPES = listOf("operator.read", "operator.write")
 
-    fun resolveAuthToken(config: GatewayConfig, storedDeviceToken: String?): String {
+    fun resolveAuthCredential(config: GatewayConfig, storedDeviceToken: String?): String {
         if (!storedDeviceToken.isNullOrBlank()) return storedDeviceToken
-        return config.gatewayToken.ifBlank { config.password }
+        return resolveSharedCredential(config)
     }
+
+    fun resolveSharedCredential(config: GatewayConfig): String =
+        when (config.authMode) {
+            GatewayAuthMode.TOKEN -> config.gatewayToken
+            GatewayAuthMode.PASSWORD -> config.password
+            GatewayAuthMode.NONE -> ""
+        }
+
+    @Deprecated("Use resolveAuthCredential", ReplaceWith("resolveAuthCredential(config, storedDeviceToken)"))
+    fun resolveAuthToken(config: GatewayConfig, storedDeviceToken: String?): String =
+        resolveAuthCredential(config, storedDeviceToken)
 
     fun buildSignedDevice(
         identity: OpenClawDeviceIdentity,

@@ -2,15 +2,16 @@ package com.littlehelper.ui.layout
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -59,8 +60,7 @@ fun ChatFlowSection(
     listState: LazyListState,
     onDeleteMessage: (String) -> Unit,
     gatewayConnectionState: ConnectionState? = null,
-    gatewayTtsEnabled: Boolean = true,
-    onToggleGatewayTts: (() -> Unit)? = null,
+    onOpenGatewaySettings: (() -> Unit)? = null,
     onRetryGatewayConnect: (() -> Unit)? = null,
     onOpenMyFiles: (() -> Unit)? = null,
     showAssistantThinking: Boolean = false,
@@ -132,8 +132,7 @@ fun ChatFlowSection(
     ) {
         ChatSectionHeader(
             gatewayConnectionState = gatewayConnectionState,
-            gatewayTtsEnabled = gatewayTtsEnabled,
-            onToggleGatewayTts = onToggleGatewayTts,
+            onOpenGatewaySettings = onOpenGatewaySettings,
             onRetryGatewayConnect = onRetryGatewayConnect,
             onOpenMyFiles = onOpenMyFiles
         )
@@ -202,8 +201,7 @@ fun ChatFlowSection(
 @Composable
 private fun ChatSectionHeader(
     gatewayConnectionState: ConnectionState? = null,
-    gatewayTtsEnabled: Boolean = true,
-    onToggleGatewayTts: (() -> Unit)? = null,
+    onOpenGatewaySettings: (() -> Unit)? = null,
     onRetryGatewayConnect: (() -> Unit)? = null,
     onOpenMyFiles: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -219,26 +217,45 @@ private fun ChatSectionHeader(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(36.dp)
-                .then(
-                    if (canRetryConnect) {
-                        Modifier
-                            .clickable(onClick = onRetryGatewayConnect!!)
-                            .semantics { contentDescription = retryConnectLabel }
-                    } else {
-                        Modifier
-                    }
-                ),
-            contentAlignment = Alignment.CenterStart
+                .width(if (onOpenMyFiles != null) 72.dp else 36.dp)
+                .height(36.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (gatewayConnectionState != null) {
-                GatewayConnectionDot(connectionState = gatewayConnectionState)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .then(
+                        if (canRetryConnect) {
+                            Modifier
+                                .clickable(onClick = onRetryGatewayConnect!!)
+                                .semantics { contentDescription = retryConnectLabel }
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (gatewayConnectionState != null) {
+                    GatewayConnectionDot(connectionState = gatewayConnectionState)
+                }
+            }
+            if (onOpenMyFiles != null) {
+                IconButton(
+                    onClick = onOpenMyFiles,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_folder),
+                        contentDescription = stringResource(R.string.my_files_content_description),
+                        tint = AppColors.textPrimary
+                    )
+                }
             }
         }
         Text(
-            text = "与龙虾助手的对话",
+            text = stringResource(R.string.chat_header_title),
             modifier = Modifier.weight(1f),
             fontSize = dimensionResource(R.dimen.chat_text_size).value.sp,
             fontWeight = FontWeight.Bold,
@@ -249,34 +266,16 @@ private fun ChatSectionHeader(
             modifier = Modifier.size(36.dp),
             contentAlignment = Alignment.CenterEnd
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (onOpenMyFiles != null) {
-                    IconButton(
-                        onClick = onOpenMyFiles,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_folder),
-                            contentDescription = stringResource(R.string.my_files_content_description),
-                            tint = AppColors.textPrimary
-                        )
-                    }
-                }
-                if (onToggleGatewayTts != null) {
-                    IconButton(
-                        onClick = onToggleGatewayTts,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                if (gatewayTtsEnabled) R.drawable.ic_volume_up else R.drawable.ic_volume_off
-                            ),
-                            contentDescription = stringResource(
-                                if (gatewayTtsEnabled) R.string.gateway_tts_on else R.string.gateway_tts_off
-                            ),
-                            tint = AppColors.textPrimary
-                        )
-                    }
+            if (onOpenGatewaySettings != null) {
+                IconButton(
+                    onClick = onOpenGatewaySettings,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings),
+                        contentDescription = stringResource(R.string.settings_content_description),
+                        tint = AppColors.textPrimary
+                    )
                 }
             }
         }

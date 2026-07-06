@@ -1,0 +1,55 @@
+{
+  "bundleId": "loongclaw-gateway-bundle",
+  "bundleVersion": "2.1.3",
+  "compatibleApp": ">=2.1.0",
+  "compatibleOpenClaw": ">=2026.6.9",
+  "platform": "windows",
+  "description": "LoongClaw Gateway companion resources (skills, upload sidecar, workspace scripts). v2.1 Release: Windows Gateway host only.",
+  "profiles": {
+    "minimal": {
+      "skills": ["littlehelper-modal"],
+      "canvas": [],
+      "sidecar": false,
+      "workspaceScripts": false
+    },
+    "standard": {
+      "skills": [
+        "littlehelper-modal",
+        "gallery-display",
+        "file-viewer-display",
+        "file-manager",
+        "notepad",
+        "weather-display"
+      ],
+      "canvas": ["pdf.min.js", "pdf.worker.min.js"],
+      "sidecar": true,
+      "workspaceScripts": true
+    }
+  },
+  "clients": {
+    "openclaw-android": {
+      "profile": "mobile_app",
+      "modalLayout": "compact",
+      "description": "LoongClaw for Android — built into OpenClaw GATEWAY_CLIENT_IDS; no patch needed"
+    },
+    "loongclaw-desktop": {
+      "profile": "pc_desktop",
+      "modalLayout": "wide",
+      "description": "LoongClaw PC client (planned) — requires patch_clientid.ps1 until upstream"
+    }
+  },
+  "installTargets": {
+    "skills": "~/.openclaw/shared-skills",
+    "canvas": "~/.openclaw/canvas",
+    "workspaceScripts": "~/.openclaw/workspace/scripts",
+    "sidecar": "~/.openclaw/companion/upload_server.py"
+  },
+  "doctor": {
+    "skillMinBytes": {
+      "littlehelper-modal/SKILL.md": 4000
+    },
+    "canvasFiles": ["pdf.min.js", "pdf.worker.min.js"],
+    "uploadPort": 18889,
+    "gatewayPort": 18789
+  }
+}

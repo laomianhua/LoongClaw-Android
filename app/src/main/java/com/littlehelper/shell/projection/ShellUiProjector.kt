@@ -10,7 +10,7 @@ import com.littlehelper.shell.model.ModuleLoadState
 import com.littlehelper.shell.model.ModulePayload
 import com.littlehelper.shell.model.ShellMode
 import com.littlehelper.shell.model.ShellNoteItem
-import com.littlehelper.shell.modal.ModalHistoryState
+import com.littlehelper.shell.modal.ModalSlotState
 import com.littlehelper.shell.modal.ModalState
 import com.littlehelper.viewmodel.MainUiState
 
@@ -58,10 +58,16 @@ object ShellUiProjector {
     fun intercomHintOverride(state: MainUiState): String? {
         if (state.shellMode != ShellMode.OPENCLAW) return null
         val shell = state.shell
-        if (shell.pairingRequired) return "批准后点上方横幅重试"
+        shell.connectUserAction?.takeIf { shell.connectionState == ConnectionState.DEGRADED }?.let {
+            return it
+        }
+        if (shell.pairingRequired) return shell.connectUserAction ?: "批准后点上方横幅重试"
         if (shell.connectionState == ConnectionState.CONNECTING) return "正在连接 Gateway…"
         if (shell.connectionState == ConnectionState.DEGRADED) {
-            return shell.bannerError ?: "连接异常，点上方重试"
+            val code = shell.connectGatewayCode?.let { "错误码 $it" }
+            val detail = shell.bannerErrorDetail?.takeIf { it.isNotBlank() }
+            return listOfNotNull(code, detail, shell.bannerError).firstOrNull()
+                ?: "连接异常，点上方重试"
         }
         return null
     }
@@ -69,8 +75,8 @@ object ShellUiProjector {
     fun modalState(state: MainUiState): ModalState =
         if (state.shellMode == ShellMode.OPENCLAW) state.shell.modalState else state.localModalState
 
-    fun modalHistory(state: MainUiState): ModalHistoryState =
-        if (state.shellMode == ShellMode.OPENCLAW) state.shell.modalHistory else ModalHistoryState()
+    fun modalSlots(state: MainUiState): ModalSlotState =
+        if (state.shellMode == ShellMode.OPENCLAW) state.shell.modalSlots else ModalSlotState()
 
     fun isModalCanvasOpen(state: MainUiState): Boolean = modalState(state).isOpen
 

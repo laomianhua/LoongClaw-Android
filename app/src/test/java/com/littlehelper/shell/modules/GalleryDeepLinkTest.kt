@@ -10,6 +10,7 @@ class GalleryDeepLinkTest {
     fun isDeepLink_recognizesGalleryDownload() {
         assertTrue(GalleryDeepLink.isDeepLink("littlehelper://gallery/download?index=0"))
         assertTrue(GalleryDeepLink.isDeepLink("littlehelper://gallery/download?index=3"))
+        assertTrue(GalleryDeepLink.isDeepLink("littlehelper://gallery/delete?index=1"))
         assertFalse(GalleryDeepLink.isDeepLink("littlehelper://gallery/toggle?index=0"))
         assertFalse(GalleryDeepLink.isDeepLink("https://example.com/gallery"))
     }

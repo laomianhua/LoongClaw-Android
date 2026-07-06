@@ -23,6 +23,7 @@ import com.littlehelper.shell.model.ModuleId
 import com.littlehelper.shell.model.ModuleLoadState
 import com.littlehelper.shell.model.ModulePayload
 import com.littlehelper.shell.model.ShellNoteItem
+import com.littlehelper.shell.modal.ModalSlotState
 import com.littlehelper.ui.theme.AppColors
 
 @Composable
@@ -31,20 +32,22 @@ fun ModuleHost(
     moduleLoadState: ModuleLoadState,
     modulePayload: ModulePayload,
     modalState: com.littlehelper.shell.modal.ModalState,
-    modalHistory: com.littlehelper.shell.modal.ModalHistoryState = com.littlehelper.shell.modal.ModalHistoryState(),
-    onNavigateModalHistory: (Int) -> Unit = {},
-    onDeleteModalHistoryPage: () -> Unit = {},
+    modalSlots: ModalSlotState = ModalSlotState(),
+    onSelectModalTab: (String) -> Unit = {},
+    onCloseModalTab: (String) -> Unit = {},
     onOpenCanvasAmap: () -> Unit = {},
+    gatewayBaseUrl: String = "",
     modifier: Modifier = Modifier
 ) {
     if (modalState.isOpen) {
-        ModalHistoryCanvasShell(
+        ModalCanvasShell(
             blocks = modalState.blocks,
             loadRevision = modalState.loadRevision,
-            history = modalHistory,
-            onNavigateHistory = onNavigateModalHistory,
-            onDeleteHistoryPage = onDeleteModalHistoryPage,
+            modalSlots = modalSlots,
+            onSelectTab = onSelectModalTab,
+            onCloseTab = onCloseModalTab,
             onOpenAmap = onOpenCanvasAmap,
+            gatewayBaseUrl = gatewayBaseUrl,
             modifier = modifier
         )
         return

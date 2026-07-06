@@ -21,15 +21,10 @@ object MyFilesRepository {
 
     fun list(context: Context): List<LocalDownloadFile> {
         val fromStore = listFromMediaStore(context)
-        val merged = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            fromStore
-        } else {
-            val fromDir = listFromLegacyDir().filter { legacy ->
-                fromStore.none { it.name == legacy.name }
-            }
-            fromStore + fromDir
+        val fromDir = listFromLegacyDir().filter { legacy ->
+            fromStore.none { it.name == legacy.name }
         }
-        return merged.sortedByDescending { it.modifiedAt }
+        return (fromStore + fromDir).sortedByDescending { it.modifiedAt }
     }
 
     fun delete(context: Context, file: LocalDownloadFile): Boolean {
@@ -53,14 +48,14 @@ object MyFilesRepository {
             MediaStore.Downloads.DATA
         )
         val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            "${MediaStore.MediaColumns.RELATIVE_PATH}=?"
+            "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
         } else {
             "${MediaStore.Downloads.DATA} LIKE ?"
         }
         val args = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            arrayOf(LittleHelperDownloadPaths.RELATIVE_PATH)
+            arrayOf("${LittleHelperDownloadPaths.RELATIVE_PATH.trimEnd('/')}%")
         } else {
-            arrayOf("%${File.separator}Download${File.separator}LittleHelper${File.separator}%")
+            arrayOf("%${File.separator}Download${File.separator}${LittleHelperDownloadPaths.FOLDER_NAME}${File.separator}%")
         }
         val files = mutableListOf<LocalDownloadFile>()
         resolver.query(

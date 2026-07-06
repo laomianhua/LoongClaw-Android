@@ -4,8 +4,6 @@ package com.littlehelper.network
 
 import android.util.Log
 
-import com.littlehelper.BuildConfig
-
 import kotlinx.coroutines.CompletableDeferred
 
 import kotlinx.coroutines.Dispatchers
@@ -753,27 +751,16 @@ internal data class VolcAsrConfig(
 
 
         fun fromBuildConfig(): VolcAsrConfig {
-
-            val resourceId = BuildConfig.VOLC_RESOURCE_ID
-
-            val configuredWsUrl = BuildConfig.VOLC_STREAMING_WS_URL
-
+            val resourceId = ""
+            val configuredWsUrl = ""
             val wsUrl = configuredWsUrl.ifBlank {
-
                 if (resourceId.isNotBlank()) V3_WS_URL_DEFAULT else V2_WS_URL
-
             }
-
             return VolcAsrConfig(
-
-                appId = BuildConfig.VOLC_APPID,
-
-                token = BuildConfig.VOLC_TOKEN,
-
-                streamingCluster = BuildConfig.VOLC_STREAMING_CLUSTER,
-
-                oneShotCluster = BuildConfig.VOLC_CLUSTER,
-
+                appId = "",
+                token = "",
+                streamingCluster = "",
+                oneShotCluster = "",
                 resourceId = resourceId,
 
                 streamingWsUrl = wsUrl

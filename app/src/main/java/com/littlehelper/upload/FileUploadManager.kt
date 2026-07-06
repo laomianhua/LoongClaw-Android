@@ -2,7 +2,7 @@ package com.littlehelper.upload
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.littlehelper.BuildConfig
+import com.littlehelper.shell.transport.GatewayClientIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -21,7 +21,7 @@ data class FileUploadResult(
 )
 
 class FileUploadManager(
-    private val host: String = BuildConfig.OPENCLAW_GATEWAY_HOST,
+    private val host: String = "",
     private val port: Int = UPLOAD_PORT,
     private val client: OkHttpClient = defaultClient(),
     private val gson: Gson = Gson()
@@ -32,6 +32,7 @@ class FileUploadManager(
             val mediaType = (mimeType.ifBlank { "application/octet-stream" }).toMediaType()
             val body = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
+                .addFormDataPart("client", GatewayClientIdentity.CLIENT)
                 .addFormDataPart(
                     "file",
                     fileName,

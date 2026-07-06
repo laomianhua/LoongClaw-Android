@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Probe OpenClaw Gateway: v3 sign + ui mode (matches LittleHelper App)."""
+"""Probe OpenClaw Gateway: v3 sign + ui mode (matches LittleHelper App).
+
+Note: SESSION_KEY below is for CLI probe convenience. The Android App uses
+AppSessionStore: agent:main:<UUID> (never agent:main:main).
+"""
 
 import base64
 import hashlib
@@ -15,6 +19,8 @@ PORT = 18789
 TOKEN = "clawbot-test-2024"
 SESSION_KEY = "agent:main:main"
 TIMEOUT_SEC = 20
+# Keep in sync with app/build.gradle.kts defaultConfig.versionName
+CLIENT_VERSION = "2.0"
 
 _PRIVATE = Ed25519PrivateKey.from_private_bytes(hashlib.sha256(b"littlehelper-probe-v1").digest())
 _PUBLIC_RAW = _PRIVATE.public_key().public_bytes_raw()
@@ -60,7 +66,7 @@ def build_connect(nonce: str, auth_token: str) -> dict:
             "maxProtocol": 4,
             "client": {
                 "id": "openclaw-android",
-                "version": "1.0.0",
+                "version": CLIENT_VERSION,
                 "platform": platform,
                 "mode": client_mode,
                 "deviceFamily": device_family,
@@ -72,7 +78,7 @@ def build_connect(nonce: str, auth_token: str) -> dict:
             "permissions": {},
             "auth": {"token": auth_token, "password": TOKEN},
             "locale": "zh-CN",
-            "userAgent": "littlehelper-probe/1.0.0",
+            "userAgent": f"littlehelper-probe/{CLIENT_VERSION}",
             "device": {
                 "id": DEVICE_ID,
                 "publicKey": PUBLIC_KEY_B64URL,

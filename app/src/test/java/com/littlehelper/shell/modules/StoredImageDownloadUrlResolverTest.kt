@@ -6,12 +6,14 @@ import org.junit.Test
 class StoredImageDownloadUrlResolverTest {
 
     private val gatewayBase = "http://192.168.1.55:18789"
+    private val uploadHost = "192.168.1.55"
 
     @Test
     fun resolve_relativeOpenClawDownloadPath() {
         val url = StoredImageDownloadUrlResolver.resolve(
             rawDownloadUrl = "/__openclaw__/file/download/abc123_photo.jpg",
-            gatewayBaseUrl = gatewayBase
+            gatewayBaseUrl = gatewayBase,
+            uploadHost = uploadHost,
         )
         assertEquals(
             "http://192.168.1.55:18789/__openclaw__/file/download/abc123_photo.jpg",
@@ -23,10 +25,11 @@ class StoredImageDownloadUrlResolverTest {
     fun resolve_uploadServerFilesPath() {
         val url = StoredImageDownloadUrlResolver.resolve(
             rawDownloadUrl = "/files/94b13de8",
-            gatewayBaseUrl = gatewayBase
+            gatewayBaseUrl = gatewayBase,
+            uploadHost = uploadHost,
         )
         assertEquals(
-            "http://${com.littlehelper.BuildConfig.OPENCLAW_GATEWAY_HOST}:18889/files/94b13de8",
+            "http://192.168.1.55:18889/files/94b13de8",
             url
         )
     }
@@ -35,10 +38,11 @@ class StoredImageDownloadUrlResolverTest {
     fun resolve_canvasPath_rewritesToUploadPortDownload() {
         val url = StoredImageDownloadUrlResolver.resolve(
             rawDownloadUrl = "/__openclaw__/canvas/94b13de8_photo.jpg",
-            gatewayBaseUrl = gatewayBase
+            gatewayBaseUrl = gatewayBase,
+            uploadHost = uploadHost,
         )
         assertEquals(
-            "http://${com.littlehelper.BuildConfig.OPENCLAW_GATEWAY_HOST}:18889/file/download/94b13de8_photo.jpg",
+            "http://192.168.1.55:18889/file/download/94b13de8_photo.jpg",
             url
         )
     }
@@ -47,10 +51,11 @@ class StoredImageDownloadUrlResolverTest {
     fun resolve_replacesHostPlaceholder() {
         val url = StoredImageDownloadUrlResolver.resolve(
             rawDownloadUrl = "http://__HOST__:18889/file/download/photo.jpg",
-            gatewayBaseUrl = gatewayBase
+            gatewayBaseUrl = gatewayBase,
+            uploadHost = uploadHost,
         )
         assertEquals(
-            "http://${com.littlehelper.BuildConfig.OPENCLAW_GATEWAY_HOST}:18889/file/download/photo.jpg",
+            "http://192.168.1.55:18889/file/download/photo.jpg",
             url
         )
     }

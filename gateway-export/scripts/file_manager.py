@@ -6,6 +6,7 @@
 用法: python scripts/file_manager.py
 """
 import os, json, time
+from mime_utils import guess_mime
 
 WORKSPACE = os.path.expanduser("~/.openclaw/workspace")
 INDEX_FILE = os.path.join(WORKSPACE, "storage", "index.json")
@@ -124,9 +125,32 @@ var catIco={'图片':'🖼','PDF':'📄','文档':'📝','其他':'📁'};
 function rebuildGalleryItems(){
 galleryItems=items.map(function(item){
 var dl='http://'+host+':'+port+'/file/download/'+encodeURIComponent(item.fileName);
-return {downloadUrl:dl,fileName:item.fileName,displayName:item.displayName};
+return {
+fileId: item.fileId||'',
+fileName: item.fileName,
+displayName: item.displayName,
+mimeType: item.mimeType || mimeFromName(item.fileName),
+downloadUrl: dl
+};
 });
 window.__LITTLEHELPER_GALLERY__={title:'文件管理',items:galleryItems};
+}
+
+function mimeFromName(name){
+var ext=(name||'').split('.').pop().toLowerCase();
+var map={
+jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',
+gif:'image/gif',bmp:'image/bmp',pdf:'application/pdf',
+doc:'application/msword',
+docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+xls:'application/vnd.ms-excel',
+xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+ppt:'application/vnd.ms-powerpoint',
+pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+html:'text/html',htm:'text/html',
+txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json'
+};
+return map[ext]||'application/octet-stream';
 }
 
 function buildGroups(){
@@ -247,6 +271,8 @@ def run():
             item["size"] = os.path.getsize(fp)
         except:
             item["size"] = 0
+        if not item.get("mimeType"):
+            item["mimeType"] = guess_mime(fn)
 
     items.sort(key=lambda i: i.get("savedAt", ""), reverse=True)
 

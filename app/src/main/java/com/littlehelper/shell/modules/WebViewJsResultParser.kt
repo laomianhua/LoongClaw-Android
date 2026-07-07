@@ -2,6 +2,7 @@ package com.littlehelper.shell.modules
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import com.littlehelper.media.DownloadMimeTypes
 
 internal object WebViewJsResultParser {
 
@@ -66,7 +67,10 @@ internal object WebViewJsResultParser {
                 fileId = fileId?.trim().orEmpty(),
                 storageFileName = storageName.ifBlank { label },
                 displayName = label,
-                mimeType = mimeType?.trim().orEmpty().ifBlank { "image/jpeg" },
+                mimeType = DownloadMimeTypes.resolve(
+                    mimeType?.trim().orEmpty(),
+                    storageName.ifBlank { label },
+                ),
                 downloadUrl = url
             )
         }

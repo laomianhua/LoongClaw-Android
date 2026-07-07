@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from upload_env import resolve_index_file, resolve_storage_dir, resolve_upload_dir
+from mime_utils import guess_mime
 
 UPLOAD_DIR = resolve_upload_dir()
 STORAGE_DIR = resolve_storage_dir()
@@ -77,6 +78,7 @@ def main() -> None:
         "fileId": file_id,
         "fileName": basename,
         "displayName": display_name,
+        "mimeType": guess_mime(basename),
         "savedAt": datetime.now().isoformat(),
         "path": dst,
     }
@@ -89,6 +91,7 @@ def main() -> None:
         "ok": True,
         "fileId": file_id,
         "displayName": display_name,
+        "mimeType": entry["mimeType"],
         "tags": tags,
         "savedPath": dst,
         "note": f"已保存：{display_name}" + (f"（标签：{','.join(tags)}）" if tags else ""),

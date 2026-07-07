@@ -116,15 +116,38 @@ object CanvasWebViewBridge {
 
     private const val READ_GALLERY_SCRIPT = """
 (function(){
+  function mimeFromName(name){
+    var ext=(name||'').split('.').pop().toLowerCase();
+    var map={
+      jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',
+      gif:'image/gif',bmp:'image/bmp',pdf:'application/pdf',
+      doc:'application/msword',
+      docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls:'application/vnd.ms-excel',
+      xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt:'application/vnd.ms-powerpoint',
+      pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      html:'text/html',htm:'text/html',
+      txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json'
+    };
+    return map[ext]||'application/octet-stream';
+  }
+  function resolveMime(declared,fileName){
+    var fromName=mimeFromName(fileName);
+    if(!declared) return fromName;
+    if(declared==='image/jpeg'&&fromName!=='image/jpeg'&&fromName!=='application/octet-stream') return fromName;
+    return declared;
+  }
   try {
     var g = window.__LITTLEHELPER_GALLERY__;
     if (!g || typeof g !== 'object' || !g.items || !g.items.length) return null;
     var items = g.items.map(function(it){
+      var fileName=String((it && it.fileName) || '');
       return {
         fileId: String((it && it.fileId) || ''),
-        fileName: String((it && it.fileName) || ''),
+        fileName: fileName,
         displayName: String((it && it.displayName) || ''),
-        mimeType: String((it && it.mimeType) || 'image/jpeg'),
+        mimeType: resolveMime(String((it && it.mimeType) || ''), fileName),
         downloadUrl: String((it && it.downloadUrl) || ''),
         thumbUrl: String((it && it.thumbUrl) || '')
       };
@@ -141,25 +164,41 @@ object CanvasWebViewBridge {
 (function(){
   function mimeFromName(name){
     var ext=(name||'').split('.').pop().toLowerCase();
-    if(ext==='png') return 'image/png';
-    if(ext==='webp') return 'image/webp';
-    if(ext==='gif') return 'image/gif';
-    return 'image/jpeg';
+    var map={
+      jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',
+      gif:'image/gif',bmp:'image/bmp',pdf:'application/pdf',
+      doc:'application/msword',
+      docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls:'application/vnd.ms-excel',
+      xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt:'application/vnd.ms-powerpoint',
+      pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      html:'text/html',htm:'text/html',
+      txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json'
+    };
+    return map[ext]||'application/octet-stream';
+  }
+  function resolveMime(declared,fileName){
+    var fromName=mimeFromName(fileName);
+    if(!declared) return fromName;
+    if(declared==='image/jpeg'&&fromName!=='image/jpeg'&&fromName!=='application/octet-stream') return fromName;
+    return declared;
   }
   function pack(fileId,fileName,displayName,mimeType,downloadUrl){
     if(!downloadUrl) return null;
+    var name=String(fileName||'');
     return JSON.stringify({
       fileId:String(fileId||''),
-      fileName:String(fileName||''),
-      displayName:String(displayName||fileName||''),
-      mimeType:String(mimeType||'image/jpeg'),
+      fileName:name,
+      displayName:String(displayName||name||''),
+      mimeType:resolveMime(String(mimeType||''),name),
       downloadUrl:String(downloadUrl)
     });
   }
   try {
     var o=window.__LITTLEHELPER_IMAGE__;
     if(o&&typeof o==='object'&&o.downloadUrl){
-      return pack(o.fileId,o.fileName,o.displayName||o.fileName,o.mimeType||'image/jpeg',o.downloadUrl);
+      return pack(o.fileId,o.fileName,o.displayName||o.fileName,o.mimeType,o.downloadUrl);
     }
     var params=new URLSearchParams(location.search);
     var f=params.get('f');

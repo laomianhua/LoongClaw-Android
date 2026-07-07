@@ -77,11 +77,25 @@ def viewer_pdf(filepath: str, filename: str, file_id: str = '', title: str = '',
     # 复制到 canvas（供 pdf.js 渲染）+ 复制到 storage（供 upload_server 下载）
     safe_name = f'{file_id}.pdf'
     copy_to_canvas(filepath, safe_name)
-    # 预览 PDF 不写 index.json；永久入库用 save_to_storage.py
+    # 放到 storage 供 upload_server 下载，并写入 index.json（标签=临时）
     storage_dir = os.path.join(WORKSPACE, 'storage')
     storage_path = os.path.join(storage_dir, safe_name)
     if not os.path.exists(storage_path):
         shutil.copy2(filepath, storage_path)
+    # 写 index.json
+    idx_file = os.path.join(storage_dir, 'index.json')
+    idx = {}
+    if os.path.exists(idx_file):
+        with open(idx_file, 'r', encoding='utf-8') as f:
+            idx = json.load(f)
+    items = idx.get('items', [])
+    items = [i for i in items if i.get('fileName') != safe_name]
+    from datetime import datetime
+    items.append({'fileId': file_id, 'fileName': safe_name, 'displayName': filename,
+                  'savedAt': datetime.now().isoformat(), 'path': storage_path, 'tags': ['临时']})
+    idx['items'] = items
+    with open(idx_file, 'w', encoding='utf-8') as f:
+        json.dump(idx, f, ensure_ascii=False, indent=2)
     pdf_url = f'/__openclaw__/canvas/{safe_name}'
     # 下载走 upload_server 18889（和画廊/游记 PDF 一致）
     download_url = f'http://__HOST__:{port}/file/download/{safe_name}'

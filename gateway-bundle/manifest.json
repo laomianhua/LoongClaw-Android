@@ -1,6 +1,6 @@
 {
   "bundleId": "loongclaw-gateway-bundle",
-  "bundleVersion": "2.1.3",
+  "bundleVersion": "2.1.4",
   "compatibleApp": ">=2.1.0",
   "compatibleOpenClaw": ">=2026.6.9",
   "platform": "windows",

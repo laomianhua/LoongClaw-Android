@@ -9,12 +9,24 @@ object DownloadedFileValidator {
             head.startsWith("{") || head.startsWith("[")
     }
 
+    /** 网关/代理返回的错误页；合法 `.html` 文件不算错误页。 */
+    fun looksLikeErrorPage(bytes: ByteArray, expectedMime: String): Boolean {
+        if (!looksLikeHtmlOrJson(bytes)) return false
+        return !expectedMime.lowercase().startsWith("text/html")
+    }
+
     fun isLikelyFile(bytes: ByteArray, mimeType: String): Boolean {
         if (bytes.isEmpty()) return false
-        if (looksLikeHtmlOrJson(bytes)) return false
-        return when (mimeType.lowercase()) {
+        val normalized = mimeType.lowercase()
+        if (looksLikeHtmlOrJson(bytes) && !normalized.startsWith("text/html")) return false
+        return when (normalized) {
             "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif" -> isLikelyImage(bytes)
             "application/pdf" -> isLikelyPdf(bytes)
+            "text/html", "text/plain", "text/markdown", "text/csv" -> true
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            -> isLikelyZip(bytes)
             else -> bytes.size >= 4
         }
     }
@@ -43,4 +55,11 @@ object DownloadedFileValidator {
 
     private fun isLikelyPdf(bytes: ByteArray): Boolean =
         bytes.size >= 5 && bytes.copyOfRange(0, 5).decodeToString() == "%PDF-"
+
+    private fun isLikelyZip(bytes: ByteArray): Boolean =
+        bytes.size >= 4 &&
+            bytes[0] == 'P'.code.toByte() &&
+            bytes[1] == 'K'.code.toByte() &&
+            bytes[2] == 3.toByte() &&
+            bytes[3] == 4.toByte()
 }

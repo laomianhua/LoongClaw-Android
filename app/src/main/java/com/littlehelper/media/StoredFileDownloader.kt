@@ -19,7 +19,11 @@ class StoredFileDownloader(
     private val client: OkHttpClient = downloadClient()
 ) {
 
-    suspend fun downloadBytes(asset: StoredImageAsset): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun downloadBytes(asset: StoredImageAsset): ByteArray =
+        downloadBytes(asset, DownloadMimeTypes.resolve(asset.mimeType, asset.storageFileName))
+
+    private suspend fun downloadBytes(asset: StoredImageAsset, effectiveMime: String): ByteArray =
+        withContext(Dispatchers.IO) {
         val url = StoredImageDownloadUrlResolver.resolve(
             asset.downloadUrl,
             gatewayBaseUrl,
@@ -37,10 +41,10 @@ class StoredFileDownloader(
             if (!response.isSuccessful || body == null) {
                 throw IOException("下载失败 HTTP ${response.code}")
             }
-            if (DownloadedFileValidator.looksLikeHtmlOrJson(body)) {
+            if (DownloadedFileValidator.looksLikeErrorPage(body, effectiveMime)) {
                 throw IOException("下载内容无效（可能是 HTML/JSON 错误页）")
             }
-            if (!DownloadedFileValidator.isLikelyFile(body, asset.mimeType)) {
+            if (!DownloadedFileValidator.isLikelyFile(body, effectiveMime)) {
                 throw IOException("下载内容不是有效文件")
             }
             body
@@ -74,13 +78,14 @@ class StoredFileDownloader(
         }
 
     private suspend fun downloadAndSave(context: Context, asset: StoredImageAsset): SavedDownloadFile {
-        val bytes = downloadBytes(asset)
+        val effectiveMime = DownloadMimeTypes.resolve(asset.mimeType, asset.storageFileName)
+        val bytes = downloadBytes(asset, effectiveMime)
         return LittleHelperFileSaver.saveDownloadedBytes(
             context = context,
             bytes = bytes,
             displayName = asset.displayName,
             storageFileName = asset.storageFileName,
-            mimeType = asset.mimeType
+            mimeType = effectiveMime
         ).getOrThrow()
     }
 

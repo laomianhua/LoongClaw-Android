@@ -31,4 +31,33 @@ class DownloadedFileValidatorTest {
         val pdf = "%PDF-1.4\n".toByteArray()
         assertTrue(DownloadedFileValidator.isLikelyFile(pdf, "application/pdf"))
     }
+
+    @Test
+    fun isLikelyFile_acceptsHtmlWhenMimeIsTextHtml() {
+        val html = "<!DOCTYPE html><html></html>".toByteArray()
+        assertTrue(DownloadedFileValidator.isLikelyFile(html, "text/html"))
+    }
+
+    @Test
+    fun isLikelyFile_acceptsDocxZipHeader() {
+        val zip = byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 3, 4, 0, 0)
+        assertTrue(
+            DownloadedFileValidator.isLikelyFile(
+                zip,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
+        )
+    }
+
+    @Test
+    fun looksLikeErrorPage_allowsHtmlFiles() {
+        val html = "<!DOCTYPE html><html></html>".toByteArray()
+        assertFalse(DownloadedFileValidator.looksLikeErrorPage(html, "text/html"))
+    }
+
+    @Test
+    fun looksLikeErrorPage_rejectsHtmlForPdf() {
+        val html = "<!DOCTYPE html><html></html>".toByteArray()
+        assertTrue(DownloadedFileValidator.looksLikeErrorPage(html, "application/pdf"))
+    }
 }

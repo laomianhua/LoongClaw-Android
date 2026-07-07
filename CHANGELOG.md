@@ -8,6 +8,11 @@
 
 ---
 
+## 2026-07-07 — Release v2.1.4（文件下载修复）
+
+- **App**：文件管理器下载 PDF/DOCX/HTML 失败 — 按扩展名推断 MIME、放宽校验；新增 `DownloadMimeTypes`
+- **Gateway bundle 2.1.4**：`file_manager.py` / `save_to_storage.py` 补 `mimeType`；新增 `mime_utils.py`；`file-manager` skill 契约更新
+
 ## 2026-07-06 — Release v2.1.3（开源前验收）
 
 - **App**：版本号 **2.1.3**；欢迎语与 OpenClaw 客户端定位对齐；新启动器图标

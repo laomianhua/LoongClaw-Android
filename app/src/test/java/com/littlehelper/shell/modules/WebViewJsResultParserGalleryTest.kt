@@ -92,4 +92,26 @@ class WebViewJsResultParserGalleryTest {
         assertEquals("t", gallery!!.title)
         assertEquals(1, gallery.items.size)
     }
+
+    @Test
+    fun parseStoredImageGallery_infersMimeTypeFromFileNameWhenMissing() {
+        val json = """
+            {
+              "title": "文件管理",
+              "items": [
+                {
+                  "fileId": "abc",
+                  "fileName": "abc_report.pdf",
+                  "displayName": "报告",
+                  "downloadUrl": "http://host/file/download/abc_report.pdf"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val gallery = WebViewJsResultParser.parseStoredImageGallery(json)
+
+        assertNotNull(gallery)
+        assertEquals("application/pdf", gallery!!.items.single().mimeType)
+    }
 }

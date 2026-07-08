@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from upload_env import (
     resolve_canvas_dir,
     resolve_index_file,
+    resolve_state_dir,
     resolve_storage_dir,
     resolve_upload_dir,
     resolve_upload_port,
@@ -36,6 +37,8 @@ from upload_env import (
 
 UPLOAD_DIR = resolve_upload_dir()
 STORAGE_DIR = resolve_storage_dir()
+# Legacy path when files landed under state/storage instead of workspace/storage
+STORAGE_DIR2 = os.path.join(resolve_state_dir(), "storage")
 CANVAS_DIR = resolve_canvas_dir()
 INDEX_FILE = resolve_index_file()
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -91,12 +94,15 @@ def resolve_upload_file(storage_name: str) -> str | None:
 
 
 def resolve_download_file(storage_name: str) -> str | None:
-    """Prefer workspace/storage, then uploads (with uuid prefix fallback)."""
+    """Prefer workspace/storage, then legacy state/storage, then uploads."""
     if not storage_name or ".." in storage_name or "/" in storage_name or "\\" in storage_name:
         return None
-    storage_fp = os.path.join(STORAGE_DIR, storage_name)
-    if os.path.isfile(storage_fp):
-        return storage_fp
+    for search_dir in (STORAGE_DIR, STORAGE_DIR2):
+        if not os.path.isdir(search_dir):
+            continue
+        storage_fp = os.path.join(search_dir, storage_name)
+        if os.path.isfile(storage_fp):
+            return storage_fp
     return resolve_upload_file(storage_name)
 
 
@@ -156,9 +162,7 @@ class UploadHandler(BaseHTTPRequestHandler):
         if not file_name or ".." in file_name or "/" in file_name or "\\" in file_name:
             self._json_response(400, {"error": "invalid file name"})
             return
-        fp = os.path.join(STORAGE_DIR, file_name)
-        if not (os.path.isfile(fp)):
-            fp = resolve_upload_file(file_name) or ""
+        fp = resolve_download_file(file_name) or ""
         if not fp or not os.path.isfile(fp):
             self._json_response(404, {"error": "file not found"})
             return
@@ -251,7 +255,9 @@ class UploadHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, format: str, *args) -> None:
-        print(f"[upload-server] {args[0]} {args[1]} {args[2]}", flush=True)
+        # BaseHTTPRequestHandler sometimes passes fewer than 3 args (e.g. on 404);
+        # indexing args[2] previously crashed the worker thread silently.
+        print(f"[upload-server] {' '.join(str(a) for a in args)}", flush=True)
 
 
 def run() -> None:

@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 UPLOAD_DIR = os.path.expanduser("~/.openclaw/uploads")
 STORAGE_DIR = os.path.expanduser("~/.openclaw/workspace/storage")
+STORAGE_DIR2 = os.path.expanduser("~/.openclaw/storage")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(STORAGE_DIR, exist_ok=True)
 HOST = "0.0.0.0"
@@ -125,7 +126,7 @@ class UploadHandler(BaseHTTPRequestHandler):
         # /file/download/{fileName} — 从 storage/ 或 uploads/ 提供下载
         if path.startswith("/file/download/"):
             file_name = unquote(path[len("/file/download/"):])
-            for search_dir in (STORAGE_DIR, UPLOAD_DIR):
+            for search_dir in (STORAGE_DIR, STORAGE_DIR2, UPLOAD_DIR):
                 if not os.path.isdir(search_dir):
                     continue
                 fp = os.path.join(search_dir, file_name)
@@ -182,7 +183,7 @@ class UploadHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, format, *args):
-        print(f"[upload-server] {args[0]} {args[1]} {args[2]}")
+        print(f"[upload-server] {' '.join(str(a) for a in args)}")
 
 
 def run():

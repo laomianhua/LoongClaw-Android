@@ -8,6 +8,12 @@
 
 ---
 
+## 2026-07-08 — Gateway bundle 2.1.5（upload sidecar 稳定性）
+
+- **sidecar / export `upload_server.py`**：`log_message` 不再按固定下标取 `args`（404 等日志导致进程静默崩溃）
+- **双 storage 兼容**：下载优先 `workspace/storage`，兼容遗留 `~/.openclaw/storage`；删除走同一解析路径
+- **export**：同步 Gateway 产出的 `upload_server.py`；确认 `upload_env.py` 仍在仓库（`save_to_storage` 依赖）
+
 ## 2026-07-07 — Release v2.1.4（文件下载修复）
 
 - **App**：文件管理器下载 PDF/DOCX/HTML 失败 — 按扩展名推断 MIME、放宽校验；新增 `DownloadMimeTypes`
